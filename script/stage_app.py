@@ -6,8 +6,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from release_support import sign, signing_identity, macho_files
 root = pathlib.Path(__file__).resolve().parent.parent
-destination = root / 'dist/OpenRagnar.app'
+identity = signing_identity(os.environ.get('OPENRAGNAR_SIGNING_IDENTITY', '-'))
+destination = pathlib.Path(os.environ.get('OPENRAGNAR_APP_OUTPUT', str(root / 'dist/OpenRagnar.app'))).expanduser().resolve()
 work = pathlib.Path(tempfile.mkdtemp(prefix='openragnar-stage-', dir='/private/tmp'))
 app = work / 'OpenRagnar.app'
 contents = app / 'Contents'
@@ -38,13 +40,12 @@ for name in ('LICENSE', 'NOTICE'):
 plist = dict(CFBundleExecutable='OpenRagnar', CFBundleIdentifier='com.techinsf.openragnar', CFBundleName='OpenRagnar', CFBundleDisplayName='OpenRagnar', CFBundlePackageType='APPL', CFBundleShortVersionString='0.4.0', CFBundleVersion='5', LSMinimumSystemVersion='14.0', NSPrincipalClass='NSApplication', NSHighResolutionCapable=True)
 with (contents / 'Info.plist').open('wb') as file: plistlib.dump(plist, file)
 subprocess.run(['/usr/bin/xattr', '-cr', str(app)], check=True)
-# Sign each bundled Mach-O before the outer app. Ad-hoc signing, local test only.
-for path in runtime.rglob('*'):
-    if path.is_file() and path.suffix in ('.so', '.dylib'):
-        subprocess.run(['/usr/bin/codesign', '--force', '--sign', '-', str(path)], check=True, capture_output=True)
-subprocess.run(['/usr/bin/codesign', '--force', '--sign', '-', str(runtime / 'bin/python3.12')], check=True)
-subprocess.run(['/usr/bin/codesign', '--force', '--sign', '-', str(app)], check=True)
-destination.parent.mkdir(exist_ok=True)
+# Sign bundled executables/libraries before the app. Public builds use the same
+# Developer ID identity, Hardened Runtime and secure timestamps throughout.
+for path in macho_files(runtime):
+    sign(path, identity, executable=True)
+sign(app, identity, executable=True)
+destination.parent.mkdir(parents=True, exist_ok=True)
 if destination.exists(): shutil.rmtree(destination)
 subprocess.run(['/usr/bin/ditto', '--norsrc', '--noextattr', str(app), str(destination)], check=True)
 subprocess.run(['/usr/bin/xattr', '-d', 'com.apple.FinderInfo', str(destination)], capture_output=True)

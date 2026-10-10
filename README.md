@@ -66,6 +66,8 @@ open dist/OpenRagnar.app
 
 This creates `dist/OpenRagnar-0.4.0-arm64.dmg`. Install the app in Applications before configuring clients. **Connectors → Connect Claude Desktop** backs up and merges a separate `openragnar` entry, preserving other servers. Reconnect the client after changes; old processes retain their loaded engine.
 
+Local builds are ad-hoc signed. The [release guide](docs/releases.md) covers isolated test builds, Developer ID signing, notarization and the feature → staging → main workflow. Public signing remains unverified pending Apple Developer enrollment; setting up these scripts does not make an existing DMG notarized.
+
 Other MCP clients can use:
 
 ```json
@@ -106,7 +108,7 @@ Uploads use vector-only processing. OpenViking embedding/storage costs may apply
 
 The 0.4.0 source suite has **67 regression tests**. The local app passed MCP 2025-11-25 negotiation, the 26-tool catalog, writing/filling/readback on an owned public tab, complete omitted-output recovery, and read-only DMG relocation/signature checks. A live memory check saved a verified route and recalled it with an empty local cache; its selector was deterministic and made no model call.
 
-An earlier 0.2.1 Jev trial completed one public task with one decision, 1,232 reported input tokens and 197 output tokens. This is historical smoke-test evidence, not a reliability benchmark. The rebuilt 0.4.0 live Jev trial required renewed Keychain approval. Other adapters have unit coverage; real OpenRouter/local-model servers were not exercised.
+After Keychain approval, an installed 0.4.0 Jev trial completed one public documentation task with one decision, five browser calls, 1,416 reported input tokens and 197 output tokens. It retrieved two experience hints, verified the requested phrase, and saved the outcome to OpenViking with confirmed readback. An earlier 0.2.1 trial reported 1,232 input tokens and 197 output tokens. These are separate smoke tests, not a matched savings or reliability benchmark. Other adapters have unit coverage; real OpenRouter/local-model servers were not exercised.
 
 The dashboard keeps text token equivalents (UTF-8 bytes divided by three), provider-reported usage, Neo's estimates and manually entered matched benchmarks distinct. Neo's aggregate statistics include gateway traffic and are not added to gateway savings. No Claude quota-savings percentage is claimed: hidden reasoning, full conversation replay, media billing, cache rates and subscription weighting are not observable here.
 
@@ -114,9 +116,10 @@ Run offline tests without browser accounts or paid model calls:
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s neo-personal -p 'test_*.py'
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s script -p 'test_*.py'
 ```
 
-GitHub Actions runs the Python suite and a separate native Swift compile check. Live checks are opt-in; the [benchmark procedure](docs/benchmarks.md) explains their effects and how to measure matched tasks.
+The release tooling adds 17 offline policy checks, for 84 tests across both suites. GitHub Actions runs both Python suites and a separate native Swift compile check. Live checks are opt-in; the [benchmark procedure](docs/benchmarks.md) explains their effects and how to measure matched tasks.
 
 ## Source map
 
