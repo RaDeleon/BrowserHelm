@@ -1,0 +1,121 @@
+import SwiftUI
+import AppKit
+import OSLog
+@MainActor final class Store: ObservableObject {
+    @Published var config = Configuration.load()
+    @Published var key = ""
+    @Published var storedKey = false
+    @Published var status = "Full read/write browser tools are ready. Reconnect your MCP client to record new sessions."
+    @Published var busy = false
+    @Published var selectedTab = 0
+    @Published var dashboard: Dashboard?
+    @Published var loadingDashboard = false
+    @Published var dashboardError = ""
+    private let logger = Logger(subsystem: service, category: "dashboard")
+    private var timer: Timer?
+    init() {
+        refreshKey()
+        refreshDashboard()
+        timer = Timer.scheduledTimer(withTimeInterval: 6, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.refreshDashboard() }
+        }
+        logger.info("OpenRagnar dashboard opened")
+    }
+    func refreshDashboard() {
+        guard !loadingDashboard else { return }
+        loadingDashboard = true
+        DispatchQueue.global().async {
+            do {
+                let json = try Runner.test("--dashboard")
+                let decoder = JSONDecoder(); decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let data = try decoder.decode(Dashboard.self, from: Data(json.utf8))
+                DispatchQueue.main.async { self.dashboard = data; self.dashboardError = ""; self.loadingDashboard = false }
+            } catch {
+                DispatchQueue.main.async { self.dashboardError = error.localizedDescription; self.loadingDashboard = false }
+            }
+        }
+    }
+    func saveBenchmark(session: String, claude: String, neo: String, gateway: String) {
+        do {
+            var value: [String: Any] = ["sessionId": session]
+            for (key, text) in [("claudeTokens",claude),("neoTokens",neo),("gatewayTokens",gateway)] {
+                if !text.isEmpty {
+                    guard let n = Int(text), n >= 0, n <= 1_000_000_000_000 else { throw AppError(text: "Enter nonnegative whole token totals, or leave a value blank.") }
+                    value[key] = n
+                }
+            }
+            let json = String(data: try JSONSerialization.data(withJSONObject: value), encoding: .utf8)!
+            busy = true
+            DispatchQueue.global().async {
+                let message: String
+                do { _ = try Runner.test("--benchmark", extra: [json]); message = "Matched benchmark saved. These totals were entered by you." }
+                catch { message = error.localizedDescription }
+                DispatchQueue.main.async { self.status = message; self.busy = false; self.refreshDashboard() }
+            }
+        } catch { status = error.localizedDescription }
+    }
+    func refreshKey() { storedKey = Keys.has(config.provider); key = "" }
+    @discardableResult func save() -> Bool {
+        do {
+            if config.provider != "none" && !key.isEmpty { try Keys.save(key.trimmingCharacters(in: .whitespacesAndNewlines), account: config.provider) }
+            try config.save(); refreshKey(); logger.info("Gateway settings saved")
+            status = "Settings saved. New MCP sessions use these settings. Restart Claude Desktop after changing the decision provider."
+            return true
+        } catch { status = error.localizedDescription; return false }
+    }
+    func removeKey() { do { try Keys.remove(config.provider); refreshKey(); status = "API key removed." } catch { status = error.localizedDescription } }
+    func test(_ mode: String) {
+        guard save() else { return }; busy = true; status = "Checking connection…"
+        DispatchQueue.global().async {
+            let result: String
+            do { result = try Runner.test(mode) } catch { result = error.localizedDescription }
+            DispatchQueue.main.async { self.status = result; self.busy = false; self.refreshDashboard() }
+        }
+    }
+    func profileBinding(_ field: WritableKeyPath<Profile, String>) -> Binding<String> {
+        Binding(get: { self.config.providers[self.config.provider]?[keyPath: field] ?? "" }, set: { new in
+            var profile = self.config.providers[self.config.provider] ?? Profile(endpoint: "", model: "")
+            profile[keyPath: field] = new; self.config.providers[self.config.provider] = profile
+        })
+    }
+    var mcpEntry: [String: Any] { ["command": Bundle.main.executableURL!.path, "args": ["--mcp"]] }
+    func copyCodex() {
+        let path = Bundle.main.executableURL!.path
+        // JSON strings share TOML basic-string escaping for file paths.
+        let quoted = String(data: try! JSONSerialization.data(withJSONObject: [path]), encoding: .utf8)!
+        let command = String(quoted.dropFirst().dropLast())
+        let config = "[mcp_servers.openragnar]\ncommand = \(command)\nargs = [\"--mcp\"]\n"
+        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(config, forType: .string)
+        status = "Codex MCP entry copied. Merge it into ~/.codex/config.toml, then restart Codex to load the tools."
+    }
+    func copyMCP() {
+        do { let data = try JSONSerialization.data(withJSONObject: ["mcpServers": ["openragnar": mcpEntry]], options: [.prettyPrinted, .sortedKeys]); NSPasteboard.general.clearContents(); NSPasteboard.general.setString(String(data: data, encoding: .utf8)!, forType: .string); status = "MCP configuration copied. Merge the openragnar entry into your client's configuration." } catch { status = error.localizedDescription }
+    }
+    func connectClaude() {
+        do {
+            let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Claude/claude_desktop_config.json")
+            try FileManager.default.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
+            let existing = try? Data(contentsOf: path)
+            var root: [String: Any] = [:]
+            if let data = existing {
+                guard let parsed = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw AppError(text: "Claude configuration is not an object. No changes made.") }; root = parsed
+            }
+            guard root["mcpServers"] == nil || root["mcpServers"] is [String: Any] else { throw AppError(text: "Unexpected mcpServers format. No changes made.") }
+            var servers = root["mcpServers"] as? [String: Any] ?? [:]
+            if let old = servers["openragnar"] as? [String: Any], let command = old["command"] as? String, !command.hasSuffix("/OpenRagnar.app/Contents/MacOS/OpenRagnar") { throw AppError(text: "Another openragnar entry already exists. Use Copy MCP config to review it.") }
+            servers["openragnar"] = mcpEntry; root["mcpServers"] = servers
+            let updated = try JSONSerialization.data(withJSONObject: root, options: [.prettyPrinted, .sortedKeys])
+            if let old = existing {
+                guard try Data(contentsOf: path) == old else { throw AppError(text: "Claude configuration changed. Try again.") }
+                let backup = path.appendingPathExtension("openragnar-\(Int(Date().timeIntervalSince1970)).bak")
+                try old.write(to: backup, options: .withoutOverwriting)
+                try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: backup.path)
+            }
+            try updated.write(to: path, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: path.path)
+            logger.info("Claude Desktop MCP configuration updated")
+            refreshDashboard()
+            status = "OpenRagnar added to Claude Desktop. Existing MCP entries preserved. Quit and reopen Claude Desktop, then enable OpenRagnar's tools."
+        } catch { status = error.localizedDescription }
+    }
+}
