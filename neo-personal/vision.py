@@ -112,6 +112,10 @@ class VisionProvider:
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
 
     def request(self, path, payload=None, timeout=30):
+        deadline = getattr(self, 'deadline', None)
+        if deadline is not None:
+            if deadline <= time.monotonic(): raise ValueError('Vision elapsed-time budget reached')
+            timeout = min(timeout, deadline-time.monotonic())
         if self.kind == 'openrouter' and not self.api_key:
             raise ValueError('Save your OpenRouter API key in Settings → Vision.')
         headers = {'Content-Type': 'application/json'}
@@ -238,7 +242,7 @@ def capture_screen(gateway, page, dpr, request_id):
     return image, hashlib.sha256(data).hexdigest()
 
 
-def visual_act(gateway, args, request_id):
+def visual_act(gateway, args, request_id, lock_held=False):
     allowed = {'page', 'instruction', 'action', 'successText'}
     if not isinstance(args, dict) or set(args) - allowed:
         raise ValueError('Invalid visual action arguments.')
@@ -250,7 +254,7 @@ def visual_act(gateway, args, request_id):
     config = gateway.vision_config()
     if not config.get('enabled'):
         raise ValueError('Vision is disabled. Enable it in OpenRagnar Settings, then reconnect the MCP client.')
-    if not gateway.nav_lock.acquire(blocking=False):
+    if not lock_held and not gateway.nav_lock.acquire(blocking=False):
         raise ValueError('Another delegated action is running in this connection.')
     try:
         # Validate without reading any credential until inference is necessary.
@@ -300,8 +304,13 @@ before.successPresent=%s;return before;''' % (page, VIEWPORT_JS,
         else:
             if provider.kind == 'openrouter':
                 provider = VisionProvider(config, gateway.vision_key())
+            provider.deadline = getattr(gateway.context, 'execution_deadline', None)
             if row is not None: row['provider_calls'] += 1
-            try: point = provider.point(image, instruction)
+            event = {'kind':'vision','provider':provider.kind,'model':provider.model,'status':'error','usage':{}}
+            if row is not None: row.setdefault('provider_events', []).append(event)
+            try:
+                point = provider.point(image, instruction)
+                event.update(status='ok',usage=point.get('usage',{}),latency=point.get('latencySeconds',0))
             except Exception:
                 if row is not None: row['provider_unknown'] += 1
                 if task and scene:
@@ -370,5 +379,6 @@ return {stale:false,clicked:%s};''' % (page, VIEWPORT_JS, json.dumps(before),
                     report['reason'] = 'Click was sent, but verification failed. Inspect the page; do not repeat the click blindly.'
         return finish()
     finally:
-        gateway.nav_lock.release()
-        gateway.cancelled.discard(request_id)
+        if not lock_held:
+            gateway.nav_lock.release()
+            gateway.cancelled.discard(request_id)

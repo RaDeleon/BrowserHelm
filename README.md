@@ -4,9 +4,41 @@
 
 OpenRagnar connects an MCP client such as Claude Desktop or Codex to a separately running [BrowserOS Neo](https://github.com/browseros-ai/BrowserOS) instance. Neo executes browser actions. OpenRagnar controls how much browser context comes back and can delegate bounded navigation to Jev or another configured model.
 
-Version **0.4.7** targets Apple Silicon Macs running macOS 14+. This is an experimental portfolio project. Preview DMGs are ad-hoc signed, not notarized. Neo is required and is not bundled.
+The locally tested **0.4.12** build targets Apple Silicon Macs running macOS 14+. This is an experimental portfolio project. Preview DMGs are ad-hoc signed, not notarized. Neo is required and is not bundled.
+
+New: [`openragnar_execute`](docs/delegated-executor.md) accepts one bounded read-only browser plan, batches inspection/extraction, uses the configured decision provider for observed links and optionally locates visual targets. It returns explicit completion checks or partial progress with escalation. This reduces main-agent round trips for supported plans; general 10× speed and total-cost savings remain unproven.
+
+**Settings → Browser execution → Delegate routine browser steps** lets you compare delegation with main-agent browser control while keeping compact forwarding. Save and reconnect after switching. See the [comparison procedure](docs/benchmarks.md#delegation-onoff-comparison); delegation remains optional pending matched quality, speed and total-cost evidence.
 
 Download the DMG from [GitHub Releases](https://github.com/RaDeleon/OpenRagnar/releases). While this repository is private, downloads require repository access. Each release includes a SHA-256 checksum and a packaging verification report. Version tags trigger a tested Apple Silicon build and attach the DMG automatically.
+
+Latest results: the [0.4.12 optimization retest](#measured-results-0412) compares 18 tasks after fixes to task-marker overhead, executor arguments/help and oversized inspection. Task markers are now opt-in in Settings. The original [18-task pilot](docs/validation/2026-10-11-six-case-pilot.md) remains available for comparison.
+
+## Requirements
+
+**OpenRagnar is macOS-only right now.** The current app and DMG support **Apple Silicon Macs running macOS 14 or later**. Windows, Linux and Intel Macs are not supported by the current release.
+
+| To run the app | Requirement |
+| --- | --- |
+| Operating system | macOS 14 (Sonoma) or later. |
+| Hardware | An Apple Silicon Mac (M-series chip). |
+| Browser backend | BrowserOS Neo installed separately and running on the same Mac. It is not bundled with OpenRagnar. |
+| AI client | Claude Desktop, Codex, or another MCP client that can launch a local stdio server. |
+| Installation | Install `OpenRagnar.app` in `/Applications`, then configure and reconnect your MCP client. |
+
+The packaged app includes its Python runtime. **You do not need to install Python or Xcode to run the DMG build.**
+
+Additional services are optional and depend on which features you use:
+
+| Feature | Additional requirement |
+| --- | --- |
+| Direct browser tools | No Jev or vision provider required. |
+| Model-assisted navigation | A configured Jev or other supported decision provider, with an API key for providers that require one. |
+| Local vision | Ollama or LM Studio running locally with a compatible vision model downloaded separately. |
+| Cloud vision | Explicitly select OpenRouter and configure its API key; provider charges may apply. |
+| Experience memory | A configured OpenViking service and private connection configuration. Embedding/storage costs may apply. |
+
+**Building from source** additionally requires Xcode selected with `xcode-select` and a relocatable Apple Silicon Python 3.12 runtime for app packaging. See [Build and connect](#build-and-connect).
 
 ## Why build this?
 
@@ -30,6 +62,35 @@ Use matched tasks, the same main-agent model and comparable browser state and to
 
 The development priority is fewer expensive planner round trips: bounded multi-step execution, deterministic browser evidence, verified experience reuse and compact results. Use Jev or vision when the task needs it, and justify cloud calls by measured total-task benefit. Local vision is the default starting path; users can explicitly select OpenRouter. Both paths must meet the same correctness and measurement requirements.
 
+## Measured results (0.4.12)
+
+On **October 11, 2026**, the six-case suite ran **18 actual Claude tasks**, one attempt per case in each mode. All used **Opus 5.5 on High, Claude Code 2.1.296**, the same Neo backend and comparable task-specific tools. Delegated vision used local Ollama `qwen3-vl:2b-instruct`; the repeatable navigation plan used Jev. These are controlled Claude Code results, not persistent Claude Desktop timings.
+
+| Mode | Independently verified | Sum of six task times | Main-agent turns | Main-agent API-equivalent cost |
+| --- | ---: | ---: | ---: | ---: |
+| BrowserOS Neo directly | 5/6* | 71.25s | 24 | $0.448888 |
+| OpenRagnar, delegation off | 6/6 | 53.05s | 19 | $0.399326 |
+| OpenRagnar, delegation on | 6/6 | 53.27s | 19 | $0.431377 |
+
+| Task | Neo directly | Ragnar off | Ragnar on |
+| --- | ---: | ---: | ---: |
+| Guarded typography inspection | 6.34s | 5.08s | 5.32s |
+| Public navigation and extraction | 20.28s* | 9.43s | 15.97s |
+| Long-page constrained comparison | 8.63s | 9.62s | 6.83s |
+| Canvas visual target | 9.14s | 11.67s | 9.64s |
+| Unknown-outcome recovery | 9.37s | 8.37s | 7.36s |
+| Repeatable navigation, first acquisition | 17.50s | 8.89s | 8.14s |
+
+Compared with the original 0.4.11 pilot, delegation on went from **84.00s to 53.27s** across the six tasks (**37% less elapsed time**), from **35 to 19 planner turns**, and from **$0.567924 to $0.431377** in main-agent API-equivalent cost (**24% lower**). Both delegated passes verified 6/6 tasks. Optional markers removed 12 start/finish tool calls per Ragnar mode. The delegated public-navigation task had zero argument/help errors, down from four. Recovery deliberately injected one error per mode; all three runs verified exactly one submission.
+
+Delegation off and on took nearly the same total time in this pass, with off using about **7% less main-agent API-equivalent spend**. Keep delegation optional and choose it for workloads where verified completion and total cost justify it. The open-ended navigation-on task used delegated reads and direct tools without a Jev decision; the repeatable-plan task invoked Jev once. These results do not measure a fully autonomous Jev browser loop.
+
+*The direct-Neo navigation answer matched the expected URL, heading and explanation, but failed the independent live-state check. Stale tab URL metadata is a plausible verifier false negative. The attempt remains unverified and its time/cost remain in the totals; this is not evidence of a Ragnar accuracy advantage. The verifier was corrected and checked without another paid task.*
+
+**Limits:** one sample per case/mode is not enough for reliable median/tail latency or broad performance claims. Totals sum different workloads and include failed verification, process/MCP startup, recovery and final independent checks; fixture preparation is outside the clock. Caching, run order and network variability remain confounds. The cost column is Claude's client-reported list-price API equivalent, not a Max subscription charge or measured allowance saving. Decision/vision fees and compute or memory costs are not fully priced, so total cost per successful task remains unknown. Cloud vision, remote OpenViking retrieval and learned repeats were not measured. **The 10× target has not been demonstrated.**
+
+See the [full retest report](docs/validation/2026-10-11-six-case-retest-0.4.12.md), [original pilot](docs/validation/2026-10-11-six-case-pilot.md), [reproducible workload and settings](docs/six-case-benchmark.md), and [fix validation](docs/validation/0.4.12-pilot-fixes.md). Raw traces and usage are retained locally under ignored `dist/benchmarks/`; neither pilot was overwritten.
+
 ## Capabilities
 
 | Capability | Behavior |
@@ -47,6 +108,38 @@ The development priority is fewer expensive planner round trips: bounded multi-s
 General read/write remains available through Neo's tools. The autonomous navigation loop excludes forms, buttons, query-string URLs and cross-origin navigation, and escalates on uncertainty, errors, cancellation or exhausted budgets. The separate visual tool can perform one explicitly requested click; it does not plan or loop.
 
 ## Architecture
+
+### From Claude to the browser and back
+
+Claude plans the task and chooses an MCP tool. **OpenRagnar is the execution gateway**, **Jev is a bounded text decision model**, **vision grounds a visual target**, and **BrowserOS Neo performs the browser actions**. Results return through OpenRagnar to Claude. Optional **OpenViking** stores and retrieves past outcomes; local evidence controls whether a proven route or visual target can skip inference.
+
+The three workflow patterns below show where context or calls can be saved. **Jev and vision are separate tools today**: Claude can use both in a task, with a return to Claude between stages. OpenRagnar does not yet implement an autonomous combined Jev-plus-vision loop. Vision can also be used without Jev.
+
+#### 1. Direct browser tools
+
+![Claude to OpenRagnar to Neo and back, with gateway context savings and optional memory](docs/images/browser-path-direct.png)
+
+Claude sends `run` or a granular browser tool; OpenRagnar forwards it to Neo and compacts the result. No Jev or vision inference is added. Shorter descriptions, duplicate removal and bounded text reduce browser context; omitted output remains recoverable. Claude retains planning and overall task verification.
+
+#### 2. Jev-assisted public navigation
+
+![Jev-assisted navigation, local verification, route reuse and savings](docs/images/browser-path-jev.png)
+
+One `openragnar_navigate` call can observe links, ask Jev to choose, recheck and follow the current link, and verify the requested phrase before returning to Claude. This can avoid intermediate Claude planning turns. Two qualifying local successes can permit route reuse without a decision call; live checks remain. The loop handles public same-origin links, not forms or arbitrary workflows.
+
+#### 3. Jev and vision in the same task
+
+![Separate navigation and visual calls coordinated by Claude, including savings and OpenViking](docs/images/browser-path-jev-vision.png)
+
+Claude can navigate with Jev, then call `openragnar_visual_act` for a target that structured page evidence cannot identify. OpenRagnar captures through Neo, asks the selected grounder for coordinates, checks freshness and optionally sends one explicit click. The visual tool returns a compact report without the screenshot. Local vision is the starting path; explicitly selected cloud vision adds provider cost. Qualifying identical-task/scene evidence can avoid inference on repeats.
+
+**OpenViking is a memory side channel, not an action hop.** Navigation recall is local-first and bounded to two hints / 1.6 KB. Remote hints are advisory; only independent local verification can authorize automatic reuse. Outcomes and failure lessons queue for vector-only upload. Screenshot data and visual coordinates stay local. Memory embedding/storage costs can still apply.
+
+**Savings labels describe mechanisms, not a measured Claude bill or quota reduction.** Historical smoke tests showed ~80% shorter instructions, ~40% smaller catalog bytes and ~98.5% smaller first snapshot output in an earlier configuration. The 0.4.7 navigation comparison removed one Neo call per followed link (5 → 4) and reduced median complete-call time ~6.4% on one deterministic task versus 0.4.6. These results do not demonstrate the 10× end-to-end target or a Neo-direct comparison.
+
+Read the [complete execution walkthrough](docs/browser-execution.md) for exact dispatch, verification, memory, savings evidence and cost boundaries. Editable [direct](docs/images/browser-path-direct.svg), [Jev](docs/images/browser-path-jev.svg) and [Jev + vision](docs/images/browser-path-jev-vision.svg) SVGs accompany the PNGs.
+
+### Runtime components
 
 ```mermaid
 flowchart LR
@@ -70,7 +163,7 @@ Each MCP connection launches its own gateway. Closing the GUI does not stop a cl
 
 ## Build and connect
 
-Requirements: an Apple Silicon Mac, macOS 14+, Xcode selected with `xcode-select`, running BrowserOS Neo, and a relocatable Apple Silicon Python **3.12** runtime for packaging. Python unit tests also support 3.9+.
+For a source build, use an Apple Silicon Mac running macOS 14+, Xcode selected with `xcode-select`, and a relocatable Apple Silicon Python **3.12** runtime for packaging. Keep BrowserOS Neo running for connection and live browser checks. Python unit tests also support 3.9+. For packaged-app requirements, see [Requirements](#requirements).
 
 ```sh
 git clone https://github.com/RaDeleon/OpenRagnar.git
@@ -85,7 +178,7 @@ Download an `aarch64-apple-darwin` Python 3.12 `install_only` archive from the o
 open dist/OpenRagnar.app
 ```
 
-This creates `dist/OpenRagnar-0.4.7-arm64.dmg`. Install the app in Applications before configuring clients. **Connectors → Connect Claude Desktop** backs up and merges a separate `openragnar` entry, preserving other servers. Reconnect the client after changes; old processes retain their loaded engine.
+The package script creates a versioned `dist/OpenRagnar-<version>-arm64.dmg`. Install the app in Applications before configuring clients. **Connectors → Connect Claude Desktop** and **Connectors → Connect Codex** back up and add a separate `openragnar` entry, preserving other servers. Codex setup uses its shared `~/.codex/config.toml` (or `CODEX_HOME/config.toml` when set), requires no separately installed CLI, preserves comments, and refuses invalid TOML or conflicting entries. Copy config remains available for manual setup. Open a new Codex chat or restart the client to load the tools. Configured is distinct from a live connection; old processes retain their loaded engine.
 
 Local builds are ad-hoc signed. The [release guide](docs/releases.md) covers isolated test builds, Developer ID signing, notarization and the feature → staging → main workflow. Public signing remains unverified pending Apple Developer enrollment; setting up these scripts does not make an existing DMG notarized.
 

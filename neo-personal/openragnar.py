@@ -19,6 +19,9 @@ from metrics import Metrics, NeoReader, dashboard, size, text_size, usage_tokens
 from experience import ExperienceMemory
 from diagnostics import Diagnostics, diagnostic_snapshot, classify_error, issue, browser_issue
 from gateway import Gateway, encode, emit, rpc_result, rpc_error, tool_result, MAX_WIRE_BYTES, untrusted
+from executor import EXEC_TOOL, EXEC_HELP, execute
+
+TASK_TOOL = {"name":"openragnar_task","description":"Optional task tracking (adds start/finish calls). Track one user prompt as one task. Start before browser work, finish after verification; clarification and recovery stay in the task. This records agent markers, not exact prompt submission time. Use a short private-data-free label. Resume the same task ID after reconnect using attach. Usage must be client-reported or explicitly estimated; never invent hidden Claude tokens. No browser action or provider request.","inputSchema":{"type":"object","properties":{"action":{"type":"string","enum":["start","finish","attach","usage"]},"task_id":{"type":"string"},"label":{"type":"string","maxLength":120},"model":{"type":"string"},"effort":{"type":"string"},"status":{"type":"string","enum":["complete","failed","cancelled","awaiting_approval"]},"verification":{"type":"string","enum":["unverified","agent_reported"]},"usage_source":{"type":"string","enum":["client_reported","estimated"]},"usage":{"type":"object","properties":{k:{"type":"integer","minimum":0} for k in ("input_tokens","output_tokens","cache_read_tokens","cache_write_5m_tokens","cache_write_1h_tokens")},"additionalProperties":False}},"required":["action"],"additionalProperties":False}}
 
 NAV_TOOL = {"name": "openragnar_navigate", "description": "Delegate a bounded public-page navigation task to the decision provider selected in OpenRagnar Settings. Opens its own tab, follows observed same-origin links, verifies successText locally. No forms/buttons. Cloud providers receive goal, URLs and link labels. Returns verified completion or escalation with provider usage; no automatic retry. Dry run proposes one link without following it.", "inputSchema": {"type": "object", "properties": {"startUrl": {"type": "string"}, "goal": {"type": "string", "maxLength": 500}, "successText": {"type": "string", "minLength": 4, "maxLength": 200}, "maxSteps": {"type": "integer", "minimum": 1, "maximum": 6, "default": 4}, "dryRun": {"type": "boolean", "default": False}}, "required": ["startUrl", "goal", "successText"], "additionalProperties": False}}
 STATUS_TOOL = {"name": "openragnar_status", "description": "Show decision provider, model and gateway settings, without API keys. No provider call.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}, "annotations": {"readOnlyHint": True}}
@@ -71,6 +74,9 @@ return await new Promise(resolve => {
 class OpenRagnarGateway(Gateway):
     def __init__(self, settings, output_dir, api_key=""):
         super().__init__(settings.get("upstream", "http://127.0.0.1:9010/mcp"), output_dir, max_output_tokens=settings.get("maxOutputTokens", 2000))
+        self.docs["openragnar_execute"] = EXEC_HELP
+        for tool in (TASK_TOOL, NAV_TOOL, STATUS_TOOL, VISION_TOOL):
+            self.docs[tool["name"]] = tool["description"] + "\n" + json.dumps(tool["inputSchema"])
         self.settings, self.api_key = settings, api_key
         self.key_loaded = bool(api_key)
         self.settings_path = None
@@ -112,6 +118,17 @@ class OpenRagnarGateway(Gateway):
             print('OpenRagnar memory unavailable; browser forwarding remains enabled', file=sys.stderr)
 
     def upstream_call(self, request):
+        deadline = getattr(self.context, 'execution_deadline', None)
+        if deadline is not None:
+            if getattr(self.context, 'execution_request_id', None) in self.cancelled:
+                raise ValueError('Executor cancelled; no new browser call dispatched')
+            if time.monotonic() >= deadline:
+                raise ValueError('Executor elapsed-time budget reached')
+            if request.get('method') == 'tools/call':
+                calls = getattr(self.context, 'execution_calls', 0)
+                if calls >= self.context.execution_call_limit:
+                    raise ValueError('Executor browser-call budget reached')
+                self.context.execution_calls = calls + 1
         context = getattr(self.context, 'row', None)
         if context is not None:
             context['upstream_input_bytes'] += size(request)
@@ -131,6 +148,10 @@ class OpenRagnarGateway(Gateway):
                     context['diagnostic'] = browser_issue(result)
                     context['execution_failed'] = True
         return response
+
+    def request_timeout(self):
+        deadline = getattr(self.context, 'execution_deadline', None)
+        return min(120, max(.05, deadline-time.monotonic())) if deadline is not None else 120
 
     def enable_metrics(self, path):
         try:
@@ -167,6 +188,9 @@ class OpenRagnarGateway(Gateway):
                    finished=0, status='error', input_bytes=size(request), upstream_input_bytes=0, upstream_bytes=0,
                    client_bytes=0, upstream_text=0, client_text=0, upstream_calls=0,
                    provider_tokens=0, provider_calls=0, provider_unknown=0, media_count=0)
+        if self.metrics and method == 'tools/call':
+            try: row['task_id'] = self.metrics.tasks.active(self.metrics.sid)
+            except Exception: pass
         self.context.row = row
         prior_failure = None
         if self.memory and method == 'tools/call' and not row['tool'].startswith('openragnar_'):
@@ -288,6 +312,23 @@ class OpenRagnarGateway(Gateway):
             self.vision_api_key = self.read_provider_key('openrouter')
         return self.vision_api_key
 
+    def delegation_enabled(self):
+        # Refresh for existing clients too: a cached tool catalog must not bypass
+        # a saved opt-out. Already-running plans finish under their original limits.
+        if self.settings_path:
+            try:
+                path = pathlib.Path(self.settings_path)
+                if not path.is_file(): raise ValueError('Missing settings')
+                value = load_settings(path).get('delegationEnabled', True)
+            except (OSError, ValueError, TypeError, AttributeError):
+                raise ValueError('Delegation settings could not be refreshed. No delegated action started.') from None
+        else:
+            value = self.settings.get('delegationEnabled', True)
+        if type(value) is not bool:
+            raise ValueError('Invalid delegation setting. No delegated action started.')
+        self.settings['delegationEnabled'] = value
+        return value
+
     def transform(self, request, response):
         response = super().transform(request, response)
         if not response or "result" not in response:
@@ -295,17 +336,27 @@ class OpenRagnarGateway(Gateway):
         result = response["result"]
         if request.get("method") == "initialize":
             result["serverInfo"] = {"name": "openragnar", "title": "OpenRagnar", "version": VERSION}
-            result["instructions"] += "\nUse openragnar_navigate for bounded link navigation; its successText is an explicit text-presence test, not proof of a broader task. Provider errors/uncertainty return escalation. run remains available for complex work."
-            if self.vision_config().get('enabled'):
-                result['instructions'] += '\nFor targets requiring vision, use openragnar_visual_act instead of sending screenshots to the main model. Prefer current DOM refs when available; never use vision for login, CAPTCHA or required human approvals.'
+            if self.settings.get('agentTaskMarkers', False) is True:
+                result['instructions'] += '\nFor each new user prompt involving browser work, start openragnar_task with a short label, actual main-agent model and effort if known, then finish after verification. Continue the same task for clarification/recovery. Save the task ID and attach it after reconnect. Do not invent usage. These markers approximate prompt boundaries; manual Tasks controls can record submission time.'
+            else:
+                result['instructions'] += '\nTask markers are optional and disabled by default to avoid extra round trips. Use openragnar_task only when task tracking is requested; manual Tasks controls remain available.'
+            if self.delegation_enabled():
+                result['instructions'] += '\nPrefer openragnar_execute for supported multi-step read-only browser tasks: supply one bounded plan, allowed actions and explicit completion checks. It batches inspection/extraction, delegates observed link choices and optionally locates visual targets. Read partial results on escalation before recovery. Completion verifies only its supplied checks. Keep complex planning, judgment and recovery with the main agent. Use direct tools for unsupported work; do not add a model call to a simple deterministic read.'
+                result["instructions"] += "\nUse openragnar_navigate for bounded link navigation; its successText is an explicit text-presence test, not proof of a broader task. Provider errors/uncertainty return escalation. run remains available for complex work."
+                if self.vision_config().get('enabled'):
+                    result['instructions'] += '\nFor targets requiring vision, use openragnar_visual_act instead of sending screenshots to the main model. Prefer current DOM refs when available; never use vision for login, CAPTCHA or required human approvals.'
+            else:
+                result['instructions'] += '\nOpenRagnar delegation is disabled in Settings. Use direct Neo tools through this gateway; the main agent handles browser decisions and vision. Compact results and task tracking remain available.'
         elif request.get("method") == "tools/list":
             if self.settings.get("compactCatalog", False):
                 keep = {"run", "name_session", "request_human_help", "await_human_help", "neo_help", "neo_read_output"}
                 result["tools"] = [tool for tool in result.get("tools", []) if tool["name"] in keep]
             if not result.get("nextCursor"):
-                result["tools"] += [copy.deepcopy(NAV_TOOL), copy.deepcopy(STATUS_TOOL)]
-                if self.vision_config().get('enabled'):
-                    result['tools'].append(copy.deepcopy(VISION_TOOL))
+                result["tools"] += [copy.deepcopy(STATUS_TOOL), copy.deepcopy(TASK_TOOL)]
+                if self.delegation_enabled():
+                    result['tools'] += [copy.deepcopy(EXEC_TOOL), copy.deepcopy(NAV_TOOL)]
+                    if self.vision_config().get('enabled'):
+                        result['tools'].append(copy.deepcopy(VISION_TOOL))
         return response
 
     def run_browser(self, code):
@@ -435,7 +486,10 @@ class OpenRagnarGateway(Gateway):
                             break
                         if context is not None: context['provider_calls'] += 1
                         provider_attempted = True
+                        event = {'kind':'decision','provider':provider.kind,'model':provider.model,'status':'error','usage':{}}
+                        if context is not None: context.setdefault('provider_events', []).append(event)
                         decision = provider.choose(decision_context, options)
+                        event.update(status='ok',usage=decision.get('usage',{}),latency=decision.get('latencySeconds',0),model=decision.get('model',provider.model))
                         report.pop('failureCategory', None)
                     else:
                         avoided += 1
@@ -499,13 +553,37 @@ class OpenRagnarGateway(Gateway):
             self.cancelled.add(request.get("params", {}).get("requestId"))
             return None
         name = request.get("params", {}).get("name") if isinstance(request, dict) and request.get("method") == "tools/call" else None
-        if name in ("openragnar_navigate", "openragnar_status", "openragnar_visual_act"):
+        if name == 'openragnar_task':
             try:
-                if name == "openragnar_status":
+                if not self.metrics: raise ValueError('Task metrics unavailable')
+                args = dict(request['params'].get('arguments', {}))
+                if args.get('action') == 'attach':
+                    args['session_id'] = self.metrics.sid
+                    value = self.metrics.tasks.command(args, source='agent_marker')
+                else:
+                    value = self.metrics.tasks.command(args, self.metrics.sid, 'agent_marker')
+                context = getattr(self.context, 'row', None)
+                if context is not None: context['task_id'] = value.get('task_id')
+                return rpc_result(request, tool_result(encode(value).decode()))
+            except (ValueError, TypeError, KeyError) as error:
+                return rpc_result(request, tool_result(str(error), True))
+        if name in ("openragnar_execute", "openragnar_navigate", "openragnar_status", "openragnar_visual_act"):
+            try:
+                enabled = self.delegation_enabled()
+                if name != 'openragnar_status' and not enabled:
+                    raise ValueError('Browser delegation is disabled in OpenRagnar Settings. Use direct Neo tools; no delegated action started.')
+                if name == 'openragnar_execute':
+                    value = execute(self, request['params'].get('arguments', {}), request.get('id'))
+                    context = getattr(self.context, 'row', None)
+                    if context is not None and value.get('status') != 'complete':
+                        context['outcome'] = 'escalated'
+                elif name == "openragnar_status":
                     kind = self.settings.get("provider", "none")
                     value = {"provider": kind, "profile": self.settings.get("providers", {}).get(kind, {}), "upstream": self.upstream, "compactCatalog": self.settings.get("compactCatalog", False), "outputBudgetBytes": self.budget, "metricsAvailable": self.metrics is not None and not self.metric_error}
-                    value['learning'] = {'enabled':bool(self.memory and self.memory.enabled), 'delegationTool':'openragnar_navigate',
-                                         'scope':'Public same-origin links; two locally verified runs allow route reuse. Direct tools record MCP outcomes, not task completion.'}
+                    value['delegationEnabled'] = enabled
+                    value['agentTaskMarkers'] = self.settings.get('agentTaskMarkers', False) is True
+                    value['learning'] = {'enabled':bool(self.memory and self.memory.enabled), 'delegationTool':'openragnar_execute',
+                                         'scope':'Read-only plans; public same-origin links. Two locally verified matching plans allow route reuse. Direct tools record MCP outcomes, not task completion.'}
                     value['vision'] = self.vision_config()
                 elif name == 'openragnar_visual_act':
                     value = visual_act(self, request['params'].get('arguments', {}), request.get('id'))
@@ -547,8 +625,16 @@ def main():
     parser.add_argument("--diagnostics", action="store_true")
     parser.add_argument("--test-memory", action="store_true")
     parser.add_argument("--sync-memory", action="store_true")
+    parser.add_argument("--task", help="JSON task start, finish, attach or usage command")
+    parser.add_argument("--connect-codex", help="Installed OpenRagnar launcher path")
     parser.add_argument("--benchmark", help="JSON containing sessionId and optional claudeTokens, neoTokens, gatewayTokens")
     args = parser.parse_args()
+    if args.connect_codex:
+        from client_setup import connect_codex
+        try: print(connect_codex(args.connect_codex))
+        except (OSError, ValueError) as error:
+            print(str(error), file=sys.stderr); sys.exit(1)
+        return
     diagnostics_path = pathlib.Path(args.settings).parent / 'diagnostics.sqlite'
     if args.diagnostics:
         print(json.dumps(diagnostic_snapshot(diagnostics_path, pathlib.Path(args.settings).parent/'metrics.sqlite')))
@@ -583,6 +669,9 @@ def main():
         except Exception: pass
         value['diagnostics'] = diagnostic_snapshot(diagnostics_path, metrics_path)
         print(json.dumps(value))
+        return
+    if args.task:
+        print(json.dumps(Metrics(metrics_path).tasks.command(json.loads(args.task))))
         return
     if args.benchmark:
         value = json.loads(args.benchmark)

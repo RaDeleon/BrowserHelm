@@ -136,7 +136,7 @@ class NavigationTests(unittest.TestCase):
         request={'method':'tools/list'}
         reply={'result':{'tools':[{'name':n,'description':'d','inputSchema':{'type':'object'}} for n in ['run','snapshot','act','name_session']]}}
         result=self.g.transform(request,reply)['result']
-        self.assertEqual(set(t['name'] for t in result['tools']),{'run','name_session','neo_help','neo_read_output','openragnar_navigate','openragnar_status'})
+        self.assertEqual(set(t['name'] for t in result['tools']),{'run','name_session','neo_help','neo_read_output','openragnar_execute','openragnar_navigate','openragnar_status','openragnar_task'})
     def test_status_never_contains_key(self):
         self.g.api_key='secret-value'
         reply=self.g.handle({'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'openragnar_status','arguments':{}}})

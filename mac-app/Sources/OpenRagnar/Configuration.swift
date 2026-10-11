@@ -51,6 +51,8 @@ struct Configuration: Codable {
     var provider = "none"
     var upstream = "http://127.0.0.1:9010/mcp"
     var compactCatalog = false
+    var delegationEnabled = true
+    var agentTaskMarkers = false
     var configVersion = 3
     var maxOutputTokens = 2000
     var memory = MemoryConfiguration()
@@ -63,15 +65,21 @@ struct Configuration: Codable {
         "custom": Profile(endpoint: "", model: "")]
     static func load() -> Configuration {
         guard let data = try? Data(contentsOf: settingsURL),
-              var root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return Self() }
+              let config = try? decode(data) else { return Self() }
+        return config
+    }
+    static func decode(_ data: Data) throws -> Configuration {
+        guard var root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw CocoaError(.coderReadCorrupt)
+        }
         if (root["configVersion"] as? Int ?? 0) < 3 { root["compactCatalog"] = false; root["configVersion"] = 3 }
+        if root["delegationEnabled"] == nil { root["delegationEnabled"] = true }
+        if root["agentTaskMarkers"] == nil { root["agentTaskMarkers"] = false }
         if root["memory"] == nil { root["memory"] = ["enabled": false] }
         if root["vision"] == nil {
             root["vision"] = ["enabled": false, "provider": "ollama", "endpoint": "http://127.0.0.1:11434", "model": "qwen3-vl:2b-instruct"]
         }
-        guard let updated = try? JSONSerialization.data(withJSONObject: root),
-              let config = try? JSONDecoder().decode(Self.self, from: updated) else { return Self() }
-        return config
+        return try JSONDecoder().decode(Self.self, from: JSONSerialization.data(withJSONObject: root))
     }
     func save() throws {
         try FileManager.default.createDirectory(at: support, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])

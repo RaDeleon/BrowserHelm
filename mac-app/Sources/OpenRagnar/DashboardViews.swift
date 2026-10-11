@@ -43,6 +43,7 @@ struct ConnectorsView: View {
                             Text("Configured means a local entry exists. A live session means OpenRagnar recorded an open MCP process; it does not imply a request is currently running.").font(.caption).foregroundStyle(.secondary)
                             HStack {
                                 if client.name == "Claude Desktop" { Button("Connect Claude Desktop") { if store.save() { store.connectClaude() } }.buttonStyle(.borderedProminent) }
+                                if client.name == "Codex" { Button("Connect Codex") { store.connectCodex() }.buttonStyle(.borderedProminent).disabled(store.busy) }
                                 Button(client.name == "Codex" ? "Copy Codex MCP config" : "Copy MCP config") { client.name == "Codex" ? store.copyCodex() : store.copyMCP() }
                             }
                             if let others = client.otherConnectors, !others.isEmpty {
