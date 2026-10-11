@@ -34,12 +34,13 @@ shutil.copytree(runtime_source / 'lib/python3.12', runtime / 'lib/python3.12', i
 # Python-build-standalone's executable and extension modules are relocatable.
 # Keep its license and compiled dependency license notices from LICENSE.txt.
 engine = resources / 'engine'; engine.mkdir()
-for name in ['gateway.py', 'decision.py', 'openragnar.py', 'launch.py', 'metrics.py', 'experience.py', 'diagnostics.py', 'version.py']:
+for name in ['gateway.py', 'decision.py', 'vision.py', 'openragnar.py', 'launch.py', 'metrics.py', 'experience.py', 'diagnostics.py', 'version.py']:
     shutil.copy2(root / 'neo-personal' / name, engine / name)
 shutil.copy2(root / 'README-OpenRagnar.md', resources / 'README.md')
 for name in ('LICENSE', 'NOTICE'):
     shutil.copy2(root / name, resources / name)
-plist = dict(CFBundleExecutable='OpenRagnar', CFBundleIdentifier='com.techinsf.openragnar', CFBundleName='OpenRagnar', CFBundleDisplayName='OpenRagnar', CFBundlePackageType='APPL', CFBundleShortVersionString=version['VERSION'], CFBundleVersion=version['BUILD'], LSMinimumSystemVersion='14.0', NSPrincipalClass='NSApplication', NSHighResolutionCapable=True)
+shutil.copy2(root / 'mac-app/Artwork/AppIcon.icns', resources / 'AppIcon.icns')
+plist = dict(CFBundleExecutable='OpenRagnar', CFBundleIdentifier='com.techinsf.openragnar', CFBundleName='OpenRagnar', CFBundleDisplayName='OpenRagnar', CFBundleIconFile='AppIcon', CFBundlePackageType='APPL', CFBundleShortVersionString=version['VERSION'], CFBundleVersion=version['BUILD'], LSMinimumSystemVersion='14.0', NSPrincipalClass='NSApplication', NSHighResolutionCapable=True)
 with (contents / 'Info.plist').open('wb') as file: plistlib.dump(plist, file)
 subprocess.run(['/usr/bin/xattr', '-cr', str(app)], check=True)
 # Sign bundled executables/libraries before the app. Public builds use the same

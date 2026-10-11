@@ -14,6 +14,7 @@ import time
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from decision import DecisionProvider, DEFAULTS
+from vision import VisionProvider, DEFAULT_VISION, visual_act
 from metrics import Metrics, NeoReader, dashboard, size, text_size, usage_tokens
 from experience import ExperienceMemory
 from diagnostics import Diagnostics, diagnostic_snapshot, classify_error, issue, browser_issue
@@ -21,6 +22,7 @@ from gateway import Gateway, encode, emit, rpc_result, rpc_error, tool_result, M
 
 NAV_TOOL = {"name": "openragnar_navigate", "description": "Delegate a bounded public-page navigation task to the decision provider selected in OpenRagnar Settings. Opens its own tab, follows observed same-origin links, verifies successText locally. No forms/buttons. Cloud providers receive goal, URLs and link labels. Returns verified completion or escalation with provider usage; no automatic retry. Dry run proposes one link without following it.", "inputSchema": {"type": "object", "properties": {"startUrl": {"type": "string"}, "goal": {"type": "string", "maxLength": 500}, "successText": {"type": "string", "minLength": 4, "maxLength": 200}, "maxSteps": {"type": "integer", "minimum": 1, "maximum": 6, "default": 4}, "dryRun": {"type": "boolean", "default": False}}, "required": ["startUrl", "goal", "successText"], "additionalProperties": False}}
 STATUS_TOOL = {"name": "openragnar_status", "description": "Show decision provider, model and gateway settings, without API keys. No provider call.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}, "annotations": {"readOnlyHint": True}}
+VISION_TOOL = {"name": "openragnar_visual_act", "description": "Local screenshot-to-point grounding through Ollama/LM Studio. Use when DOM refs cannot identify a visual target. Takes its own viewport screenshot; returns compact CSS coordinates, local model usage and latency, never the image. action=point proposes only; action=click performs one explicit click after checking the page has not changed. Optional successText checks text presence, not business completion. No retry or cloud fallback. Inspect state after an error before another click.", "inputSchema": {"type": "object", "properties": {"page": {"type": "integer", "minimum": 1}, "instruction": {"type": "string", "minLength": 1, "maxLength": 500}, "action": {"type": "string", "enum": ["point", "click"], "default": "point"}, "successText": {"type": "string", "minLength": 4, "maxLength": 200}}, "required": ["page", "instruction"], "additionalProperties": False}}
 SAFE_PATH = re.compile(r"(?:logout|signout|log-out|sign-out|delete|remove|unsubscribe|checkout|purchase|confirm|callback|oauth|authorize|download|reset|revoke|invite|accept|reject|toggle|archive|submit)", re.I)
 
 def public_url(value, origin=None):
@@ -247,12 +249,16 @@ class OpenRagnarGateway(Gateway):
         if request.get("method") == "initialize":
             result["serverInfo"] = {"name": "openragnar", "title": "OpenRagnar", "version": VERSION}
             result["instructions"] += "\nUse openragnar_navigate for bounded link navigation; its successText is an explicit text-presence test, not proof of a broader task. Provider errors/uncertainty return escalation. run remains available for complex work."
+            if self.settings.get('vision', {}).get('enabled'):
+                result['instructions'] += '\nFor targets requiring vision, use openragnar_visual_act instead of sending screenshots to the main model. Prefer current DOM refs when available; never use vision for login, CAPTCHA or required human approvals.'
         elif request.get("method") == "tools/list":
             if self.settings.get("compactCatalog", False):
                 keep = {"run", "name_session", "request_human_help", "await_human_help", "neo_help", "neo_read_output"}
                 result["tools"] = [tool for tool in result.get("tools", []) if tool["name"] in keep]
             if not result.get("nextCursor"):
                 result["tools"] += [copy.deepcopy(NAV_TOOL), copy.deepcopy(STATUS_TOOL)]
+                if self.settings.get('vision', {}).get('enabled'):
+                    result['tools'].append(copy.deepcopy(VISION_TOOL))
         return response
 
     def run_browser(self, code):
@@ -432,13 +438,19 @@ class OpenRagnarGateway(Gateway):
             self.cancelled.add(request.get("params", {}).get("requestId"))
             return None
         name = request.get("params", {}).get("name") if isinstance(request, dict) and request.get("method") == "tools/call" else None
-        if name in ("openragnar_navigate", "openragnar_status"):
+        if name in ("openragnar_navigate", "openragnar_status", "openragnar_visual_act"):
             try:
                 if name == "openragnar_status":
                     kind = self.settings.get("provider", "none")
                     value = {"provider": kind, "profile": self.settings.get("providers", {}).get(kind, {}), "upstream": self.upstream, "compactCatalog": self.settings.get("compactCatalog", False), "outputBudgetBytes": self.budget, "metricsAvailable": self.metrics is not None and not self.metric_error}
                     value['learning'] = {'enabled':bool(self.memory and self.memory.enabled), 'delegationTool':'openragnar_navigate',
                                          'scope':'Public same-origin links; two locally verified runs allow route reuse. Direct tools record MCP outcomes, not task completion.'}
+                    value['vision'] = self.settings.get('vision', DEFAULT_VISION)
+                elif name == 'openragnar_visual_act':
+                    value = visual_act(self, request['params'].get('arguments', {}), request.get('id'))
+                    context = getattr(self.context, 'row', None)
+                    if context is not None and value.get('status') in ('stale', 'not_found', 'cancelled'):
+                        context['outcome'] = 'escalated'
                 else:
                     value = self.navigate(request["params"].get("arguments", {}), request.get("id"))
                     context = getattr(self.context, 'row', None)
@@ -446,6 +458,9 @@ class OpenRagnarGateway(Gateway):
                         context['outcome'] = 'escalated' if value.get('status') == 'escalate' else value.get('status','ok')
                 return rpc_result(request, self.bound_result(tool_result(untrusted(encode(value).decode()))))
             except (ValueError, TypeError, KeyError) as error:
+                if name == 'openragnar_visual_act':
+                    context = getattr(self.context, 'row', None)
+                    if context is not None: context['diagnostic'] = issue('vision_error', exception=error)
                 return rpc_result(request, tool_result(str(error), True))
         return super().handle(request)
 
@@ -464,6 +479,7 @@ def main():
     parser.add_argument("--settings", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--test-provider", action="store_true")
+    parser.add_argument("--test-vision", action="store_true")
     parser.add_argument("--test-browser", action="store_true")
     parser.add_argument("--demo", action="store_true")
     parser.add_argument("--dashboard", action="store_true")
@@ -487,6 +503,11 @@ def main():
         sys.exit(1)
     metrics_path = pathlib.Path(args.settings).parent / 'metrics.sqlite'
     memory_path = pathlib.Path(args.settings).parent / 'experiences.sqlite'
+    if args.test_vision:
+        try: print(json.dumps(VisionProvider(settings.get('vision', DEFAULT_VISION)).test()))
+        except (ValueError, TypeError) as error:
+            print(str(error), file=sys.stderr); sys.exit(1)
+        return
     if args.test_memory or args.sync_memory:
         memory = ExperienceMemory(settings.get('memory', {}), memory_path)
         try:

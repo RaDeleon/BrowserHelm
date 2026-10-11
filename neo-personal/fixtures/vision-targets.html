@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>OpenRagnar local vision test</title>
+<style>body{margin:0;background:#edf0f4;font:24px system-ui;color:#172532}main{width:800px;margin:80px auto}canvas{display:block;width:800px;height:360px;background:white;border-radius:20px}p{font-size:18px}#outcome{font-weight:600}</style>
+<main><h1>Local vision test</h1><p>Click the green tile containing a triangle. This test changes only this page.</p>
+<canvas width="800" height="360" id="tiles"></canvas><p id="outcome">Waiting for a selection</p></main>
+<script>
+const c=document.querySelector('canvas'),ctx=c.getContext('2d');
+for(const [x,color] of [[60,'#4262ae'],[310,'#258060'],[560,'#ac6440']]){ctx.fillStyle=color;ctx.fillRect(x,80,180,180);}
+ctx.fillStyle='white';ctx.beginPath();ctx.arc(150,170,45,0,2*Math.PI);ctx.fill();
+ctx.beginPath();ctx.moveTo(400,120);ctx.lineTo(450,210);ctx.lineTo(350,210);ctx.closePath();ctx.fill();
+ctx.fillRect(620,140,60,60);
+c.addEventListener('click',e=>{const r=c.getBoundingClientRect(),x=(e.clientX-r.left)*800/r.width,y=(e.clientY-r.top)*360/r.height;
+document.querySelector('#outcome').textContent=x>=310&&x<=490&&y>=80&&y<=260?'Vision test complete':'Incorrect tile selected';});
+</script></html>

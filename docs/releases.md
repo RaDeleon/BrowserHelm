@@ -2,6 +2,8 @@
 
 All build and packaging steps live in this repository. Codex is optional. Run on an Apple Silicon Mac with Xcode command-line tools and the standalone Python 3.12 runtime described in the root README.
 
+The app icon is committed under `mac-app/Artwork` and declared in the staged bundle. To change it, edit and run `swift script/generate_icon.swift` on macOS; future local and GitHub DMGs include the regenerated ICNS. Optional local vision models are downloaded through Ollama/LM Studio separately from the DMG; see [local vision](local-vision.md).
+
 ## Branches
 
 Develop on `codex/<feature>` branches. Review changes into `staging`, run the regression suites and app checks there, then promote a tested commit to `main` through a release PR. Tag that commit before sharing its DMG. CI accepts `staging` as well as `main` and feature branches. Creating a branch or committing code does not install an app or publish a release.

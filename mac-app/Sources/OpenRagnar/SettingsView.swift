@@ -26,6 +26,21 @@ struct SettingsView: View {
                     Text("All Neo read and write tools remain available. Autonomous navigation requires a decision provider.").foregroundStyle(.secondary)
                 }
             }
+            Section("Local vision") {
+                Toggle("Ground visual targets on this Mac", isOn: $store.config.vision.enabled)
+                Picker("Vision server", selection: $store.config.vision.provider) {
+                    Text("Ollama").tag("ollama"); Text("LM Studio").tag("lmstudio")
+                }.onChange(of: store.config.vision.provider) { _, provider in
+                    store.config.vision.endpoint = provider == "ollama" ? "http://127.0.0.1:11434" : "http://127.0.0.1:1234/v1"
+                    store.config.vision.model = provider == "ollama" ? "qwen3-vl:2b-instruct" : ""
+                }
+                TextField("Local API URL", text: $store.config.vision.endpoint)
+                TextField("Downloaded vision model", text: $store.config.vision.model)
+                Text("Ollama setup: ollama pull qwen3-vl:2b-instruct (about 1.9 GB). LM Studio: load a vision model supporting normalized 0–1000 coordinates and JSON output. Keep the local server running.").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                Text("The agent calls openragnar_visual_act for a visual target. Screenshots go to the local server; the client receives a small point/click report. Jev remains the text decision provider. Point is the default; clicks check for stale pages. Save and reconnect your MCP client to update its tool list.").font(.caption).foregroundStyle(.secondary)
+                Text("This uses Qwen3-VL, not unreleased BrowserVLM weights. Latency and accuracy depend on the model and page. Local server availability does not prove pointing accuracy. No 10× speed or quota claim.").font(.caption).foregroundStyle(.secondary)
+                Button("Test vision server") { store.test("--test-vision") }
+            }
             Section("Browser gateway") {
                 TextField("Neo MCP endpoint", text: $store.config.upstream)
                 Toggle("Compact catalog (optional; full read/write still available through run)", isOn: $store.config.compactCatalog)
