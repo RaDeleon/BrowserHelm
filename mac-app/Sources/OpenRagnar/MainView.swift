@@ -9,7 +9,7 @@ struct MainView: View {
             Divider()
             VStack(spacing: 0) {
                 HStack(spacing: 14) {
-                    Text(["Overview", "Connections", "Activity", "Configuration", "Experience memory", "Diagnostics"][store.selectedTab]).font(.headline)
+                    Text(["Overview", "Connections", "Activity", "Configuration", "Experience memory", "Diagnostics", "Tasks"][store.selectedTab]).font(.headline)
                     Spacer()
                     if let d = store.dashboard { Text("Updated \(Date(timeIntervalSince1970: d.updatedAt).formatted(date: .omitted, time: .shortened))").font(.caption).foregroundStyle(.secondary) }
                     if store.loadingDashboard { ProgressView().controlSize(.mini).accessibilityLabel("Refreshing statistics") }
@@ -28,6 +28,7 @@ struct MainView: View {
                 case 3: SettingsView(store: store)
                 case 4: MemoryView(store: store)
                 case 5: DiagnosticsView(store: store)
+                case 6: TasksView(store: store)
                 default: DashboardView(store: store)
                 }
                 Divider()
@@ -51,6 +52,7 @@ struct MainView: View {
             List(selection: $store.selectedTab) {
                 Label("Dashboard", systemImage: "chart.bar.xaxis").tag(0)
                 Label("Connectors", systemImage: "point.3.connected.trianglepath.dotted").tag(1)
+                Label("Tasks", systemImage: "checklist").tag(6)
                 Label("Sessions", systemImage: "clock.arrow.circlepath").tag(2)
                 Label("Memory", systemImage: "brain").tag(4)
                 Label("Diagnostics", systemImage: "stethoscope").tag(5)

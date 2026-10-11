@@ -42,6 +42,7 @@ struct NeoSnapshot: Decodable {
     var available: Bool; var stats: NeoStats?; var sessions: [NeoSession]?; var hasMore: Bool?; var error: String?
 }
 struct Dashboard: Decodable {
+    var tasks: [PromptTask]?
     var diagnostics: DiagnosticsSnapshot?
     var memory: MemorySnapshot?
     var totals: Counters; var sessions: [GatewaySession]; var requests: [GatewayRequest]

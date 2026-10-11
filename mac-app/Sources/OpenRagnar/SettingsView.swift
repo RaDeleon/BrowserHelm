@@ -27,6 +27,13 @@ struct SettingsView: View {
                 }
             }
             VisionSettingsSection(store: store)
+            Section("Browser execution") {
+                Toggle("Delegate routine browser steps", isOn: $store.config.delegationEnabled)
+                Text("On: Ragnar runs bounded plans, using the selected decision and vision providers when needed. Off: Claude/Codex performs browser steps through direct tools; compact results remain enabled. Save, then reconnect to refresh available tools.").font(.caption).foregroundStyle(.secondary)
+                Toggle("Ask agent to mark tasks", isOn: $store.config.agentTaskMarkers)
+                Text("Optional start/finish tracking adds two agent calls per task. Off by default; manual Tasks controls still work. Save and reconnect to apply the agent guidance.").font(.caption).foregroundStyle(.secondary)
+                Text("Keep complex reasoning and recovery with the main model. Delegation is experimental: compare verified completion, total time and total cost before choosing a mode.").font(.caption).foregroundStyle(.secondary)
+            }
             Section("Browser gateway") {
                 TextField("Neo MCP endpoint", text: $store.config.upstream)
                 Toggle("Compact catalog (optional; full read/write still available through run)", isOn: $store.config.compactCatalog)

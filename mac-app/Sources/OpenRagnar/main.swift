@@ -20,6 +20,10 @@ if CommandLine.arguments.contains("--provider-key") {
         interrupt.setEventHandler { if process.isRunning { process.terminate() } }; interrupt.resume()
         try process.run(); process.waitUntilExit(); exit(process.terminationStatus)
     } catch { fputs("OpenRagnar: \(error.localizedDescription)\n", stderr); exit(1) }
+} else if CommandLine.arguments.contains("--connect-codex") {
+    do { print(try Runner.test("--connect-codex", extra: [Bundle.main.executableURL!.path])) } catch { fputs("\(error.localizedDescription)\n", stderr); exit(1) }
+} else if let index = CommandLine.arguments.firstIndex(of: "--task"), CommandLine.arguments.count > index + 1 {
+    do { print(try Runner.test("--task", extra: [CommandLine.arguments[index+1]])) } catch { fputs("\(error.localizedDescription)\n", stderr); exit(1) }
 } else if let mode = CommandLine.arguments.first(where: { ["--test-browser", "--test-provider", "--test-vision", "--dashboard", "--diagnostics", "--test-memory", "--sync-memory"].contains($0) }) {
     do { print(try Runner.test(mode)) } catch { fputs("\(error.localizedDescription)\n", stderr); exit(1) }
 } else { OpenRagnarApp.main() }

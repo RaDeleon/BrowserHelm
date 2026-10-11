@@ -386,7 +386,7 @@ class ExperienceMemory:
         document = {'schema':2, 'source':'openragnar', 'kind':'navigation', 'id':identifier, 'created':time.time(),
               'test':test or 'validation' in str(report.get('provider','')).lower(), 'host':urllib.parse.urlsplit(start).netloc, 'start':safe_url(start),
             'goal':clean(goal), 'successText':clean(needle,200), 'verified':report.get('verified') is True,
-            'verification':'literal successText presence only', 'status':report.get('status'),
+            'verification':clean(report.get('verificationScope','literal successText presence only'),200), 'status':report.get('status'),
             'provider':clean(report.get('provider',''),60), 'browserCalls':report.get('browserCalls',0),
             'model':clean((report.get('decisions') or [{}])[-1].get('model',''),100),
               'elapsedSeconds':report.get('elapsedSeconds'),

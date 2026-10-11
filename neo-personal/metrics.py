@@ -12,6 +12,7 @@ import time
 import urllib.parse
 import urllib.request
 import uuid
+from task_metrics import TaskLedger
 
 
 def digest(value):
@@ -77,13 +78,14 @@ class Metrics:
               gateway_tokens INTEGER, updated REAL);
             ''')
             columns={row[1] for row in db.execute('PRAGMA table_info(requests)')}
-            for column, kind in [('upstream_input_bytes','INTEGER DEFAULT 0'),('moves','INTEGER'),('moves_status','TEXT')]:
+            for column, kind in [('upstream_input_bytes','INTEGER DEFAULT 0'),('moves','INTEGER'),('moves_status','TEXT'),('task_id','TEXT')]:
                 if column not in columns:
                     db.execute('ALTER TABLE requests ADD COLUMN '+column+' '+kind)
             # Counters describe retained history; keep 90 days, never unbounded content logs.
             db.execute('DELETE FROM requests WHERE started < ?', (time.time()-90*86400,))
             db.execute('DELETE FROM sessions WHERE updated < ?', (time.time()-90*86400,))
             db.execute('DELETE FROM benchmarks WHERE session_id NOT IN (SELECT id FROM sessions)')
+        self.tasks = TaskLedger(self.path)
         os.chmod(self.path, 0o600)
 
     def db(self):
@@ -103,11 +105,12 @@ class Metrics:
                 self.start('Unknown MCP client')
             columns = ['id','session_id','method','tool','started','finished','status','input_bytes',
                        'upstream_input_bytes','upstream_bytes','client_bytes','upstream_text','client_text','upstream_calls',
-                       'provider_tokens','provider_calls','provider_unknown','media_count']
+                       'provider_tokens','provider_calls','provider_unknown','media_count','task_id']
             rid = row.get('id') or uuid.uuid4().hex
             data = {**row, 'id': rid, 'session_id':self.sid}
             db.execute('INSERT INTO requests('+','.join(columns)+') VALUES('+','.join('?' for _ in columns)+')',
-                       [data[c] for c in columns])
+                       [data.get(c) for c in columns])
+            self.tasks.record_providers(db, data)
             db.execute('UPDATE sessions SET updated=?, upstream_hash=COALESCE(?,upstream_hash), label=COALESCE(?,label) WHERE id=?',
                        (row['finished'], digest(upstream_session) if upstream_session else None,
                         str(label)[:120] if label else None, self.sid))
@@ -160,7 +163,7 @@ class Metrics:
                 session['active'] = not bool(session['closed'])
             except (OSError, KeyError):
                 session['active'] = False
-        return {'totals':totals,'sessions':sessions,'requests':requests,'benchmarks':benchmarks,
+        return {'tasks':self.tasks.snapshot(),'totals':totals,'sessions':sessions,'requests':requests,'benchmarks':benchmarks,
                 'retentionDays':90,'requestLimit':1000,'sessionLimit':100,'updatedAt':time.time()}
 
 
@@ -224,8 +227,9 @@ class NeoReader:
 
 def connectors(snapshot):
     home=pathlib.Path.home()
+    from client_setup import codex_config_path
     definitions=[('Claude Desktop',home/'Library/Application Support/Claude/claude_desktop_config.json'),
-                 ('Claude Code',home/'.claude.json'),('Codex',home/'.codex/config.toml')]
+                 ('Claude Code',home/'.claude.json'),('Codex',codex_config_path())]
     result=[]
     for name,path in definitions:
         configured=False
@@ -240,7 +244,7 @@ def connectors(snapshot):
             others=sorted(str(k)[:80] for k in entries if k != 'openragnar')
             entry=entries.get('openragnar',{})
             command=str(entry.get('command',''))
-            configured=command.endswith('/OpenRagnar.app/Contents/MacOS/OpenRagnar') and '--mcp' in entry.get('args',[])
+            configured=command.endswith('/OpenRagnar.app/Contents/MacOS/OpenRagnar') and '--mcp' in entry.get('args',[]) and entry.get('enabled') is not False
         except (OSError, ValueError, ImportError, TypeError, AttributeError):
             pass
         patterns={'Claude Desktop':['claude-desktop','claude desktop','claude-ai'], 'Claude Code':['claude-code','claude code'], 'Codex':['codex']}

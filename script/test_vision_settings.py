@@ -25,6 +25,25 @@ var restored = try JSONDecoder().decode(VisionConfiguration.self, from: JSONEnco
 restored.selectProvider("lmstudio"); precondition(restored.model == "studio-model")
 let migrated = try JSONDecoder().decode(VisionConfiguration.self, from: Data("{\"provider\":\"openrouter\"}".utf8))
 precondition(migrated.model == "qwen/qwen3.8-flash" && !migrated.enabled)
+var configuration = Configuration()
+configuration.provider = "typesafe"
+configuration.vision = restored
+configuration.memory.enabled = true
+var legacy = try JSONSerialization.jsonObject(with: JSONEncoder().encode(configuration)) as! [String: Any]
+legacy.removeValue(forKey: "delegationEnabled")
+legacy.removeValue(forKey: "agentTaskMarkers")
+let upgraded = try Configuration.decode(JSONSerialization.data(withJSONObject: legacy))
+precondition(!upgraded.agentTaskMarkers)
+precondition(upgraded.delegationEnabled && upgraded.provider == "typesafe" && upgraded.memory.enabled)
+configuration.agentTaskMarkers = true
+configuration.delegationEnabled = false
+let saved = try Configuration.decode(JSONEncoder().encode(configuration))
+precondition(saved.agentTaskMarkers)
+precondition(!saved.delegationEnabled && saved.vision.model == configuration.vision.model)
+configuration.agentTaskMarkers = false
+configuration.delegationEnabled = true
+let reenabled = try Configuration.decode(JSONEncoder().encode(configuration))
+precondition(reenabled.delegationEnabled && !reenabled.agentTaskMarkers)
 print("settings checks passed")
 '''
         with tempfile.TemporaryDirectory(prefix='openragnar-settings-') as directory:

@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
+<title id="title">01  Direct browser tools</title><desc id="desc">Claude plans each request; OpenRagnar forwards it and compacts the result.. Includes savings mechanisms, verification and optional OpenViking memory.</desc>
+<rect width="1600" height="1120" fill="#171b20"/>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10" fill="#d7ad77"/></marker><marker id="return" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10" fill="#8cbde4"/></marker></defs>
+<text x="64" y="52" fill="#d7ad77" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="600">OPENRAGNAR / BROWSER EXECUTION</text>
+<text x="64" y="111" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="43" font-weight="600">01  Direct browser tools</text>
+<text x="64" y="155" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="400">Claude plans each request; OpenRagnar forwards it and compacts the result.</text>
+<text x="64" y="196" fill="#91c8a0" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400">IMPLEMENTED / NO JEV OR VISION INFERENCE ADDED</text>
+<rect x="64" y="250" width="290" height="130" rx="14" fill="#222830" stroke="#39424c"/>
+<rect x="82" y="269" width="4" height="25" rx="2" fill="#d7ad77"/>
+<text x="98" y="290" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Claude</text>
+<text x="86" y="326" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Task planning + tool arguments</text>
+<text x="86" y="353" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Overall completion + recovery</text>
+<rect x="480" y="250" width="350" height="130" rx="14" fill="#222830" stroke="#39424c"/>
+<rect x="498" y="269" width="4" height="25" rx="2" fill="#d7ad77"/>
+<text x="514" y="290" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">OpenRagnar</text>
+<text x="502" y="326" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">stdio MCP → loopback HTTP MCP</text>
+<text x="502" y="353" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Short docs + bounded text output</text>
+<rect x="970" y="250" width="300" height="130" rx="14" fill="#222830" stroke="#39424c"/>
+<rect x="988" y="269" width="4" height="25" rx="2" fill="#d7ad77"/>
+<text x="1004" y="290" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">BrowserOS Neo</text>
+<text x="992" y="326" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Execute browser operations</text>
+<text x="992" y="353" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Read / click / fill / evaluate</text>
+<path d="M366 312L466 312" fill="none" stroke="#d7ad77" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="374" y="286" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400">request</text>
+<path d="M844 312L956 312" fill="none" stroke="#d7ad77" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="861" y="286" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400">dispatch</text>
+<path d="M1284 312L1390 312" fill="none" stroke="#d7ad77" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1404" y="250" width="132" height="130" rx="14" fill="#222830" stroke="#39424c"/>
+<rect x="1422" y="269" width="4" height="25" rx="2" fill="#d7ad77"/>
+<text x="1438" y="290" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Page</text>
+<text x="1426" y="326" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Live site</text>
+<path d="M1120 392V440H655V392" fill="none" stroke="#8cbde4" stroke-width="2" marker-end="url(#return)"/>
+<text x="681" y="428" fill="#8cbde4" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400">Neo result → OpenRagnar</text>
+<path d="M640 452V500H210V452" fill="none" stroke="#8cbde4" stroke-width="2" marker-end="url(#return)"/>
+<text x="236" y="488" fill="#8cbde4" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400">Compact result → Claude</text>
+<rect x="64" y="550" width="1472" height="116" rx="14" fill="#222830" stroke="#39424c"/>
+<rect x="82" y="569" width="4" height="25" rx="2" fill="#91c8a0"/>
+<text x="98" y="590" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">SAVING AT THE GATEWAY: less browser text for Claude</text>
+<text x="86" y="626" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Shorter instructions and descriptions; recognized duplicates removed.</text>
+<text x="86" y="653" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Oversized text becomes a preview + recoverable artifact. Claude still chooses the next step.</text>
+<rect x="64" y="700" width="1472" height="116" rx="14" fill="#222830" stroke="#39424c"/>
+<rect x="82" y="719" width="4" height="25" rx="2" fill="#8cbde4"/>
+<text x="98" y="740" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">NO ADDED INFERENCE: direct tools need no decision-provider key</text>
+<text x="86" y="776" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Browser operations still cost time. Direct screenshots can still reach Claude.</text>
+<text x="86" y="803" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Tool success is an MCP outcome; Claude must establish the overall task result.</text>
+<text x="64" y="858" fill="#d7ad77" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="600">OPTIONAL MEMORY / NOT A BROWSER-ACTION HOP</text>
+<rect x="64" y="880" width="435" height="150" rx="14" fill="#222830" stroke="#39424c"/>
+<rect x="82" y="899" width="4" height="25" rx="2" fill="#91c8a0"/>
+<text x="98" y="920" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Local evidence + outbox</text>
+<text x="86" y="956" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Metadata-only direct outcomes</text>
+<text x="86" y="983" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Identical failure → fixed guidance</text>
+<text x="86" y="1010" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">No automatic replay of writes</text>
+<path d="M515 938L605 938" fill="none" stroke="#d7ad77" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="517" y="921" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400">upload</text>
+<path d="M605 986L515 986" fill="none" stroke="#8cbde4" stroke-width="2" marker-end="url(#return)"/>
+<text x="518" y="1012" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400">hints</text>
+<rect x="625" y="880" width="390" height="150" rx="14" fill="#222830" stroke="#39424c"/>
+<rect x="643" y="899" width="4" height="25" rx="2" fill="#d7ad77"/>
+<text x="659" y="920" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">OpenViking</text>
+<text x="647" y="956" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Scoped outcomes + failure lessons</text>
+<text x="647" y="983" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Navigation hints in path 2</text>
+<text x="647" y="1010" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Vector-only upload processing</text>
+<rect x="1040" y="880" width="496" height="150" rx="14" fill="#222830" stroke="#39424c"/>
+<rect x="1058" y="899" width="4" height="25" rx="2" fill="#91c8a0"/>
+<text x="1074" y="920" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Memory savings</text>
+<text x="1062" y="956" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Fixed guidance for recurring failures</text>
+<text x="1062" y="983" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">No reflection pass for uploads</text>
+<text x="1062" y="1010" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Embedding / storage costs may apply</text>
+<path d="M64 1041H1536" stroke="#39424c"/>
+<text x="64" y="1070" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Savings = mechanisms, not measured Claude quota or billing reductions. 10× speed remains a target.</text>
+</svg>

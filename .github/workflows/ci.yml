@@ -33,6 +33,10 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python -m unittest discover -s neo-personal -p 'test_*.py'
+      - name: Run benchmark oracle regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -m unittest discover -s benchmarks/six_cases -p 'test_*.py'
       - name: Run release tooling regressions
         env:
           PYTHONDONTWRITEBYTECODE: '1'

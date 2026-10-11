@@ -58,6 +58,19 @@ import OSLog
             }
         } catch { status = error.localizedDescription }
     }
+    func taskCommand(_ value: [String: Any]) {
+        guard !busy else { return }
+        do {
+            let raw = String(data: try JSONSerialization.data(withJSONObject: value), encoding: .utf8)!
+            busy = true
+            DispatchQueue.global().async {
+                let message: String
+                do { _ = try Runner.test("--task", extra: [raw]); message = "Task record saved." }
+                catch { message = error.localizedDescription }
+                DispatchQueue.main.async { self.status = message; self.busy = false; self.refreshDashboard() }
+            }
+        } catch { status = error.localizedDescription }
+    }
     func refreshKey() { storedKey = Keys.has(config.provider); key = "" }
     func refreshVisionKey() { storedVisionKey = Keys.has("openrouter"); visionKey = "" }
     func selectVisionProvider(_ provider: String) {
@@ -84,7 +97,7 @@ import OSLog
             if !visionKey.isEmpty { try Keys.save(visionKey.trimmingCharacters(in: .whitespacesAndNewlines), account: "openrouter") }
             config.vision.profiles[config.vision.provider] = Profile(endpoint: config.vision.endpoint, model: config.vision.model)
             try config.save(); refreshKey(); refreshVisionKey(); logger.info("Gateway settings saved")
-            status = "Settings saved. Vision model switches apply to the next request. Reconnect after first enabling vision or changing the decision provider."
+            status = "Settings saved. Delegation off blocks new delegated requests immediately. Reconnect after changing delegation or task markers, first enabling vision or changing the decision provider."
             return true
         } catch { status = error.localizedDescription; return false }
     }
@@ -113,6 +126,19 @@ import OSLog
         let config = "[mcp_servers.openragnar]\ncommand = \(command)\nargs = [\"--mcp\"]\n"
         NSPasteboard.general.clearContents(); NSPasteboard.general.setString(config, forType: .string)
         status = "Codex MCP entry copied. Merge it into ~/.codex/config.toml, then restart Codex to load the tools."
+    }
+    func connectCodex() {
+        guard !busy else { return }
+        let command = Bundle.main.executableURL!.path
+        busy = true; status = "Adding OpenRagnar to Codex…"
+        DispatchQueue.global().async {
+            let result: String
+            do { result = try Runner.test("--connect-codex", extra: [command]) }
+            catch { result = error.localizedDescription }
+            DispatchQueue.main.async {
+                self.busy = false; self.refreshDashboard(); self.status = result
+            }
+        }
     }
     func copyMCP() {
         do { let data = try JSONSerialization.data(withJSONObject: ["mcpServers": ["openragnar": mcpEntry]], options: [.prettyPrinted, .sortedKeys]); NSPasteboard.general.clearContents(); NSPasteboard.general.setString(String(data: data, encoding: .utf8)!, forType: .string); status = "MCP configuration copied. Merge the openragnar entry into your client's configuration." } catch { status = error.localizedDescription }
