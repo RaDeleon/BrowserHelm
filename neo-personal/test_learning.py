@@ -42,7 +42,7 @@ class LearningTests(unittest.TestCase):
         end = {**self.state, 'url':'https://example.com/docs', 'found':complete}
         with patch.object(self.m,'request',side_effect=TimeoutError), patch.object(self.m,'start'), \
              patch.object(self.g,'observe',side_effect=[self.state,end]), \
-             patch.object(self.g,'run_browser',side_effect=['owned',{'present':fresh},{'url':end['url']}]) as run, \
+             patch.object(self.g,'run_browser',side_effect=['owned',{'present':fresh,'navigated':fresh}]) as run, \
              patch('decision.DecisionProvider.choose',return_value=self.decision) as choose:
             result = self.g.navigate(self.args, 1)
         return result, run.call_count, choose.call_count
@@ -53,10 +53,32 @@ class LearningTests(unittest.TestCase):
         third, browser_calls, calls3 = self.navigation()
         self.assertEqual([calls1,calls2,calls3], [1,1,0])
         self.assertTrue(first['verified'] and second['verified'] and third['verified'])
-        self.assertEqual(browser_calls,3)  # open, current-link check, navigation all remain.
-        self.assertEqual(third['browserCalls'],5)
+        self.assertEqual(browser_calls,2)  # Open, then live link check plus navigation.
+        self.assertEqual(third['browserCalls'],4)
         self.assertEqual(third['memory']['providerCallsAvoided'],1)
         self.assertEqual(self.m.snapshot()['reused_tasks_verified'],1)
+        self.assertTrue(all(isinstance(d['elapsedSeconds'], (int, float)) for d in self.m.local_documents()))
+
+    def test_verified_route_skips_key_access_and_advisory_recall(self):
+        self.save(); self.save()
+        with patch.object(self.g,'provider',side_effect=AssertionError('Unexpected provider access')) as provider, patch.object(self.m,'recall',side_effect=AssertionError('Unexpected recall')) as recall:
+            result, _, calls = self.navigation()
+        self.assertTrue(result['verified']); self.assertEqual(calls,0)
+        provider.assert_not_called(); recall.assert_not_called()
+
+    def test_already_satisfied_task_skips_advisory_recall(self):
+        with patch.object(self.m,'start'), patch.object(self.m,'recall') as recall, patch.object(self.g,'provider') as provider, patch.object(self.g,'run_browser',return_value='owned'), patch.object(self.g,'observe',return_value={**self.state,'found':True}):
+            result=self.g.navigate(self.args,1)
+        self.assertTrue(result['verified']); recall.assert_not_called(); provider.assert_not_called()
+
+    def test_cancel_during_recall_does_not_read_key_or_make_decision(self):
+        def cancel(*args):
+            self.g.cancelled.add(1)
+            return []
+        with patch.object(self.m,'start'), patch.object(self.m,'recall',side_effect=cancel), patch.object(self.g,'provider') as provider, patch.object(self.g,'run_browser',return_value='owned') as run, patch.object(self.g,'observe',return_value=self.state):
+            result=self.g.navigate(self.args,1)
+        self.assertEqual(result['failureCategory'],'cancelled'); self.assertEqual(run.call_count,1)
+        provider.assert_not_called()
 
     def test_reused_choice_still_revalidates_and_failure_revokes_eligibility(self):
         self.save(); self.save()

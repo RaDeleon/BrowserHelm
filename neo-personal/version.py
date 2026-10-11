@@ -1,3 +1,3 @@
 """Shared native bundle and MCP server version."""
-VERSION = '0.4.6'
-BUILD = '11'
+VERSION = '0.4.7'
+BUILD = '12'
