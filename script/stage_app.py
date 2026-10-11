@@ -36,6 +36,7 @@ shutil.copytree(runtime_source / 'lib/python3.12', runtime / 'lib/python3.12', i
 engine = resources / 'engine'; engine.mkdir()
 for name in ['gateway.py', 'decision.py', 'vision.py', 'openragnar.py', 'launch.py', 'metrics.py', 'experience.py', 'diagnostics.py', 'version.py']:
     shutil.copy2(root / 'neo-personal' / name, engine / name)
+shutil.copy2(root / 'neo-personal/vision-models.json', engine / 'vision-models.json')
 shutil.copy2(root / 'README-OpenRagnar.md', resources / 'README.md')
 for name in ('LICENSE', 'NOTICE'):
     shutil.copy2(root / name, resources / name)

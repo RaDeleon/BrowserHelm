@@ -6,11 +6,46 @@ let providers = ["none", "typesafe", "openrouter", "ollama", "lmstudio", "custom
 let names = ["none": "Gateway only", "typesafe": "TypeSafe AI / Jev", "openrouter": "OpenRouter", "ollama": "Ollama", "lmstudio": "LM Studio", "custom": "Custom OpenAI-compatible"]
 struct Profile: Codable { var endpoint: String; var model: String }
 struct MemoryConfiguration: Codable { var enabled = false }
+struct VisionPreset: Codable, Identifiable {
+    let id: String
+    let name: String
+    let purpose: String
+    let detail: String
+    let url: URL
+    static var recommendations: [VisionPreset] {
+        let path = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/engine/vision-models.json")
+        guard let data = try? Data(contentsOf: path), let models = try? JSONDecoder().decode([VisionPreset].self, from: data) else { return [] }
+        return models
+    }
+}
 struct VisionConfiguration: Codable {
     var enabled = false
     var provider = "ollama"
     var endpoint = "http://127.0.0.1:11434"
     var model = "qwen3-vl:2b-instruct"
+    var profiles: [String: Profile] = [:]
+    static let defaults: [String: Profile] = [
+        "ollama": Profile(endpoint: "http://127.0.0.1:11434", model: "qwen3-vl:2b-instruct"),
+        "lmstudio": Profile(endpoint: "http://127.0.0.1:1234/v1", model: ""),
+        "openrouter": Profile(endpoint: "https://openrouter.ai/api/v1", model: "qwen/qwen3.8-flash")]
+    init() {}
+    mutating func selectProvider(_ next: String) {
+        guard let fallback = Self.defaults[next] else { return }
+        profiles[provider] = Profile(endpoint: endpoint, model: model)
+        let profile = profiles[next] ?? fallback
+        provider = next; endpoint = profile.endpoint; model = profile.model
+    }
+    enum CodingKeys: String, CodingKey { case enabled, provider, endpoint, model, profiles }
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        enabled = try values.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        provider = try values.decodeIfPresent(String.self, forKey: .provider) ?? "ollama"
+        let fallback = Self.defaults[provider] ?? Self.defaults["ollama"]!
+        endpoint = try values.decodeIfPresent(String.self, forKey: .endpoint) ?? fallback.endpoint
+        model = try values.decodeIfPresent(String.self, forKey: .model) ?? fallback.model
+        profiles = try values.decodeIfPresent([String: Profile].self, forKey: .profiles) ?? [:]
+        profiles[provider] = Profile(endpoint: endpoint, model: model)
+    }
 }
 struct Configuration: Codable {
     var provider = "none"

@@ -38,8 +38,9 @@ enum Runner {
         process.arguments = ["-I", "-B", resources.appendingPathComponent("engine/launch.py").path, "--settings", settingsURL.path, "--output-dir", support.appendingPathComponent("outputs").path]
         if mode != "--mcp" { process.arguments!.append(mode) }
         var environment = ProcessInfo.processInfo.environment
-        for key in ["PYTHONHOME", "PYTHONPATH", "OPENRAGNAR_API_KEY"] { environment.removeValue(forKey: key) }
+        for key in ["PYTHONHOME", "PYTHONPATH", "OPENRAGNAR_API_KEY", "OPENRAGNAR_VISION_API_KEY"] { environment.removeValue(forKey: key) }
         if config.provider != "none" && mode == "--test-provider" { environment["OPENRAGNAR_API_KEY"] = try Keys.read(config.provider) }
+        if config.vision.provider == "openrouter" && mode == "--test-vision" { environment["OPENRAGNAR_VISION_API_KEY"] = try Keys.read("openrouter") }
         environment["PYTHONDONTWRITEBYTECODE"] = "1"
         // Browser tools do not need a decision-provider credential. Fetch lazily via a private child pipe.
         if mode == "--mcp" { environment["OPENRAGNAR_KEY_HELPER"] = Bundle.main.executableURL!.path }

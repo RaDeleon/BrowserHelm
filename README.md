@@ -18,8 +18,8 @@ The engineering work includes MCP negotiation, context compaction and recovery, 
 
 | Capability | Behavior |
 | --- | --- |
-| Browser gateway | Preserves Neo read/write tools and `run`; 26 tools including gateway helpers, or 27 with local vision enabled. |
-| Local vision | Optional screenshot-to-point or single-click grounding through local Ollama/LM Studio, with page freshness checks and compact reports. |
+| Browser gateway | Preserves Neo read/write tools and `run`; 26 tools including gateway helpers, or 27 with vision enabled. |
+| Vision | Select local Ollama/LM Studio or OpenRouter vision models for screenshot-to-point or single-click grounding, with freshness checks and compact reports. |
 | Diagnostics | Searchable error records, HTTP/MCP codes, request correlation, app/connection identity, legacy Claude MCP log projection and local JSON report export. |
 | Context control | Shortens documentation, removes recognized duplicates and bounds inline text with recoverable private artifacts. |
 | Providers | TypeSafe AI / Jev, OpenRouter, Ollama, LM Studio and custom OpenAI-compatible endpoints. |
@@ -39,7 +39,7 @@ flowchart LR
     Engine -->|loopback HTTP MCP| Neo[BrowserOS Neo]
     Neo --> Pages[Browser pages]
     Engine --> Providers[Jev / OpenRouter / local models]
-    Engine -->|private screenshot| Vision[Local vision grounder]
+    Engine -->|private screenshot| Vision[Selected vision grounder]
     Engine --> Memory[Experience adapter]
     Memory --> Viking[OpenViking service]
     Memory --> Outbox[Private SQLite outbox]
@@ -90,7 +90,7 @@ Select a provider and save its endpoint, model and key in **Settings**. Keys use
 
 See the [user guide](README-OpenRagnar.md) for provider endpoints, Codex configuration and setup details.
 
-For optional local screenshot grounding, open **Settings → Local vision**. The tested starting model is `qwen3-vl:2b-instruct` in Ollama, downloaded separately (about 1.9 GB). Enable it, test the server and reconnect your MCP client. Ask the client to use `openragnar_visual_act` for visual targets instead of receiving screenshots itself. Jev remains your text decision provider. See [local vision setup, boundaries and tests](docs/local-vision.md). BrowserVLM's unreleased weights are not bundled, and this feature does not establish 10× speed or subscription savings.
+For optional screenshot grounding, open **Settings → Vision**. The tested starting model is `qwen3-vl:2b-instruct` in Ollama, downloaded separately (about 1.9 GB). Keep it local or select OpenRouter and one of three presets, then save. Enter your OpenRouter key in the vision section for cloud models. First enabling vision requires reconnecting your MCP client; subsequent model switches apply to its next request. Ask the client to use `openragnar_visual_act` for visual targets instead of receiving screenshots itself. Jev remains your text decision provider. See [local vision setup, boundaries and tests](docs/local-vision.md). BrowserVLM's unreleased weights are not bundled, and this feature does not establish 10× speed or subscription savings.
 
 ## Try a delegated task
 
@@ -138,7 +138,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s neo-personal -p 'test_
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s script -p 'test_*.py'
 ```
 
-The current source suites have 113 gateway/diagnostics/learning/vision tests and 19 release-tooling tests, for 132 tests in total. GitHub Actions runs both Python suites and a separate native Swift compile check. Live checks are opt-in; the [benchmark procedure](docs/benchmarks.md) explains their effects and how to measure matched tasks.
+The current source suites have 141 gateway/diagnostics/learning/vision tests and 20 release/settings tests, for 161 tests in total. GitHub Actions runs both Python suites and a separate native Swift compile check. Live checks are opt-in; the [benchmark procedure](docs/benchmarks.md) explains their effects and how to measure matched tasks.
 
 ## Source map
 
@@ -148,7 +148,7 @@ The current source suites have 113 gateway/diagnostics/learning/vision tests and
 | `neo-personal/gateway.py` | MCP transport, compaction and output recovery. |
 | `neo-personal/openragnar.py` | Delegation, verification, CLI and instrumentation. |
 | `neo-personal/decision.py` | Provider adapters. |
-| `neo-personal/vision.py` | Local screenshot grounding and single-click freshness/verification guards. |
+| `neo-personal/vision.py` | Local/OpenRouter screenshot grounding and single-click freshness/verification guards. |
 | `mac-app/Artwork/` | Original native app icon; editable Core Graphics source in `script/generate_icon.swift`. |
 | `neo-personal/experience.py` | Retrieval, durable uploads and memory status. |
 | `neo-personal/metrics.py` | Counters, connector discovery and Neo statistics. |

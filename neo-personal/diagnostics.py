@@ -25,7 +25,7 @@ CATEGORIES = {
     'timeout': ('A connection or browser step timed out.', 'Inspect the browser before retrying. A timed-out write may already have completed.'),
     'browser_execution': ('Neo reported an unsuccessful browser execution.', 'Check the tab and the failed call in your client. Verify the SDK method and selector before retrying.'),
     'provider_error': ('The decision provider could not complete its request.', 'Check the provider endpoint, model, key access and credit. No automatic retry was made.'),
-    'vision_error': ('Local vision could not safely complete the requested grounding/action.', 'Check local vision settings and model availability. Inspect the result and current browser state before repeating any click; no automatic retry was made.'),
+    'vision_error': ('Vision could not safely complete the requested grounding/action.', 'Check the selected vision provider, model, API key and credit in Settings. Inspect the current browser state before repeating any click; no automatic retry was made.'),
     'escalated': ('Delegated navigation returned control to the main agent.', 'Review the task result in your client. Uncertainty and exhausted budgets can cause an expected handoff.'),
     'invalid_request': ('The request failed validation.', 'Check the tool name and arguments against the advertised schema.'),
     'internal_error': ('The gateway encountered an internal exception.', 'Use the correlation ID and exception type to locate the request. Check the running app build.'),

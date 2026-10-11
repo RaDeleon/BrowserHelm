@@ -22,7 +22,7 @@ from gateway import Gateway, encode, emit, rpc_result, rpc_error, tool_result, M
 
 NAV_TOOL = {"name": "openragnar_navigate", "description": "Delegate a bounded public-page navigation task to the decision provider selected in OpenRagnar Settings. Opens its own tab, follows observed same-origin links, verifies successText locally. No forms/buttons. Cloud providers receive goal, URLs and link labels. Returns verified completion or escalation with provider usage; no automatic retry. Dry run proposes one link without following it.", "inputSchema": {"type": "object", "properties": {"startUrl": {"type": "string"}, "goal": {"type": "string", "maxLength": 500}, "successText": {"type": "string", "minLength": 4, "maxLength": 200}, "maxSteps": {"type": "integer", "minimum": 1, "maximum": 6, "default": 4}, "dryRun": {"type": "boolean", "default": False}}, "required": ["startUrl", "goal", "successText"], "additionalProperties": False}}
 STATUS_TOOL = {"name": "openragnar_status", "description": "Show decision provider, model and gateway settings, without API keys. No provider call.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}, "annotations": {"readOnlyHint": True}}
-VISION_TOOL = {"name": "openragnar_visual_act", "description": "Local screenshot-to-point grounding through Ollama/LM Studio. Use when DOM refs cannot identify a visual target. Takes its own viewport screenshot; returns compact CSS coordinates, local model usage and latency, never the image. action=point proposes only; action=click performs one explicit click after checking the page has not changed. Optional successText checks text presence, not business completion. No retry or cloud fallback. Inspect state after an error before another click.", "inputSchema": {"type": "object", "properties": {"page": {"type": "integer", "minimum": 1}, "instruction": {"type": "string", "minLength": 1, "maxLength": 500}, "action": {"type": "string", "enum": ["point", "click"], "default": "point"}, "successText": {"type": "string", "minLength": 4, "maxLength": 200}}, "required": ["page", "instruction"], "additionalProperties": False}}
+VISION_TOOL = {"name": "openragnar_visual_act", "description": "Screenshot-to-point grounding with the vision provider selected in OpenRagnar Settings: local Ollama/LM Studio or cloud OpenRouter. OpenRouter receives the screenshot and target instruction. Use when DOM refs cannot identify a visual target. Returns compact CSS coordinates, provider usage and latency, never the image. action=point proposes only; action=click performs one explicit click after checking the page has not changed. Optional successText checks text presence, not business completion. No retry or automatic provider switch. Inspect state after an error before another click.", "inputSchema": {"type": "object", "properties": {"page": {"type": "integer", "minimum": 1}, "instruction": {"type": "string", "minLength": 1, "maxLength": 500}, "action": {"type": "string", "enum": ["point", "click"], "default": "point"}, "successText": {"type": "string", "minLength": 4, "maxLength": 200}}, "required": ["page", "instruction"], "additionalProperties": False}}
 SAFE_PATH = re.compile(r"(?:logout|signout|log-out|sign-out|delete|remove|unsubscribe|checkout|purchase|confirm|callback|oauth|authorize|download|reset|revoke|invite|accept|reject|toggle|archive|submit)", re.I)
 
 def public_url(value, origin=None):
@@ -59,6 +59,9 @@ class OpenRagnarGateway(Gateway):
         super().__init__(settings.get("upstream", "http://127.0.0.1:9010/mcp"), output_dir, max_output_tokens=settings.get("maxOutputTokens", 2000))
         self.settings, self.api_key = settings, api_key
         self.key_loaded = bool(api_key)
+        self.settings_path = None
+        self.vision_api_key = None
+        self.vision_settings_stamp = None
         self.nav_lock = threading.Lock()
         self.cancelled = set()
         self.context = threading.local()
@@ -224,10 +227,8 @@ class OpenRagnarGateway(Gateway):
                 print('OpenRagnar could not record counters; request was not retried', file=sys.stderr)
                 self.diagnostic(issue('telemetry_unavailable'), row, 'warning')
 
-    def provider(self):
-        kind = self.settings.get("provider", "none")
-        profile = self.settings.get("providers", {}).get(kind, DEFAULTS.get(kind, {}))
-        if not self.key_loaded and kind != 'none' and os.environ.get('OPENRAGNAR_KEY_HELPER'):
+    def read_provider_key(self, kind):
+        if os.environ.get('OPENRAGNAR_KEY_HELPER'):
             helper = pathlib.Path(os.environ['OPENRAGNAR_KEY_HELPER'])
             # Use only the native executable adjacent to the bundled engine. Ignore injected helper paths.
             expected = pathlib.Path(__file__).resolve().parents[2] / 'MacOS/OpenRagnar'
@@ -235,11 +236,43 @@ class OpenRagnarGateway(Gateway):
                 raise ValueError('Invalid provider Keychain helper')
             try:
                 result = subprocess.run([str(helper), '--provider-key', kind], capture_output=True, timeout=20, check=True)
-                self.api_key = result.stdout.decode('utf-8')
-                self.key_loaded = True
+                key = result.stdout.decode('utf-8')
+                if len(key) > 4096 or '\n' in key or '\r' in key:
+                    raise ValueError('Invalid provider key')
+                return key
             except (subprocess.SubprocessError, OSError, UnicodeError):
-                raise ValueError('Provider key unavailable. Open Settings → Test provider and allow Keychain access, then try again.')
+                raise ValueError('Provider key unavailable. Open Settings, test the selected provider and allow Keychain access, then try again.')
+        return ''
+
+    def provider(self):
+        kind = self.settings.get("provider", "none")
+        profile = self.settings.get("providers", {}).get(kind, DEFAULTS.get(kind, {}))
+        if not self.key_loaded and kind != 'none':
+            self.api_key = self.read_provider_key(kind)
+            self.key_loaded = True
         return DecisionProvider(kind, profile.get("endpoint", ""), profile.get("model", ""), self.api_key)
+
+    def vision_config(self):
+        # A saved model switch takes effect on the next call, including existing
+        # MCP sessions. A bad/missing settings file must never send to an old cloud choice.
+        if self.settings_path:
+            try:
+                stamp = pathlib.Path(self.settings_path).stat().st_mtime_ns
+                config = load_settings(self.settings_path).get('vision', DEFAULT_VISION)
+            except (OSError, ValueError, TypeError):
+                raise ValueError('Vision settings could not be refreshed. No screenshot sent.') from None
+            if not isinstance(config, dict):
+                raise ValueError('Invalid vision settings. No screenshot sent.')
+            self.settings['vision'] = config
+            if stamp != self.vision_settings_stamp:
+                self.vision_api_key = None
+                self.vision_settings_stamp = stamp
+        return self.settings.get('vision', DEFAULT_VISION)
+
+    def vision_key(self):
+        if self.vision_api_key is None:
+            self.vision_api_key = self.read_provider_key('openrouter')
+        return self.vision_api_key
 
     def transform(self, request, response):
         response = super().transform(request, response)
@@ -249,7 +282,7 @@ class OpenRagnarGateway(Gateway):
         if request.get("method") == "initialize":
             result["serverInfo"] = {"name": "openragnar", "title": "OpenRagnar", "version": VERSION}
             result["instructions"] += "\nUse openragnar_navigate for bounded link navigation; its successText is an explicit text-presence test, not proof of a broader task. Provider errors/uncertainty return escalation. run remains available for complex work."
-            if self.settings.get('vision', {}).get('enabled'):
+            if self.vision_config().get('enabled'):
                 result['instructions'] += '\nFor targets requiring vision, use openragnar_visual_act instead of sending screenshots to the main model. Prefer current DOM refs when available; never use vision for login, CAPTCHA or required human approvals.'
         elif request.get("method") == "tools/list":
             if self.settings.get("compactCatalog", False):
@@ -257,7 +290,7 @@ class OpenRagnarGateway(Gateway):
                 result["tools"] = [tool for tool in result.get("tools", []) if tool["name"] in keep]
             if not result.get("nextCursor"):
                 result["tools"] += [copy.deepcopy(NAV_TOOL), copy.deepcopy(STATUS_TOOL)]
-                if self.settings.get('vision', {}).get('enabled'):
+                if self.vision_config().get('enabled'):
                     result['tools'].append(copy.deepcopy(VISION_TOOL))
         return response
 
@@ -445,7 +478,7 @@ class OpenRagnarGateway(Gateway):
                     value = {"provider": kind, "profile": self.settings.get("providers", {}).get(kind, {}), "upstream": self.upstream, "compactCatalog": self.settings.get("compactCatalog", False), "outputBudgetBytes": self.budget, "metricsAvailable": self.metrics is not None and not self.metric_error}
                     value['learning'] = {'enabled':bool(self.memory and self.memory.enabled), 'delegationTool':'openragnar_navigate',
                                          'scope':'Public same-origin links; two locally verified runs allow route reuse. Direct tools record MCP outcomes, not task completion.'}
-                    value['vision'] = self.settings.get('vision', DEFAULT_VISION)
+                    value['vision'] = self.vision_config()
                 elif name == 'openragnar_visual_act':
                     value = visual_act(self, request['params'].get('arguments', {}), request.get('id'))
                     context = getattr(self.context, 'row', None)
@@ -504,7 +537,7 @@ def main():
     metrics_path = pathlib.Path(args.settings).parent / 'metrics.sqlite'
     memory_path = pathlib.Path(args.settings).parent / 'experiences.sqlite'
     if args.test_vision:
-        try: print(json.dumps(VisionProvider(settings.get('vision', DEFAULT_VISION)).test()))
+        try: print(json.dumps(VisionProvider(settings.get('vision', DEFAULT_VISION), os.environ.get('OPENRAGNAR_VISION_API_KEY', '')).test()))
         except (ValueError, TypeError) as error:
             print(str(error), file=sys.stderr); sys.exit(1)
         return
@@ -538,6 +571,7 @@ def main():
         print('OpenRagnar gateway could not start. Check Diagnostics and the Neo endpoint in Settings.', file=sys.stderr)
         sys.exit(1)
     gateway.enable_metrics(metrics_path)
+    gateway.settings_path = args.settings
     gateway.enable_diagnostics(diagnostics_path)
     gateway.enable_memory(memory_path)
     try:
