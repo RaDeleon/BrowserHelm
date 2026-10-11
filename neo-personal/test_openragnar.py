@@ -71,14 +71,14 @@ class NavigationTests(unittest.TestCase):
                 with self.assertRaises(ValueError): self.g.observe(1,'target phrase')
     def test_navigation_revalidates_and_checks_completion(self):
         complete = {**self.state,'url':'https://example.com/docs','found':True,'excerpt':'target phrase'}
-        with patch.object(self.g,'observe',side_effect=[self.state,complete]), patch.object(self.g,'run_browser',side_effect=['owned-page',{'present':True},{'url':'https://example.com/docs'}]) as run, patch('decision.DecisionProvider.choose',return_value=self.decision) as choose:
+        with patch.object(self.g,'observe',side_effect=[self.state,complete]), patch.object(self.g,'run_browser',side_effect=['owned-page',{'present':True,'navigated':True}]) as run, patch('decision.DecisionProvider.choose',return_value=self.decision) as choose:
             result = self.g.navigate(self.args, 1)
         self.assertTrue(result['verified']); self.assertEqual(result['status'],'complete')
         options = choose.call_args[0][1]
         self.assertEqual(set(options), {'L0','BLOCKED'})
         self.assertIn('document.querySelectorAll', run.call_args_list[1][0][0])
-        self.assertIn('p.goto', run.call_args_list[2][0][0])
-        self.assertEqual(result['browserCalls'], 5)
+        self.assertIn('p.goto', run.call_args_list[1][0][0])
+        self.assertEqual(result['browserCalls'], 4)
     def test_stale_link_does_not_navigate(self):
         with patch.object(self.g,'observe',return_value=self.state), patch.object(self.g,'run_browser',side_effect=['owned',{'present':False}]) as run, patch('decision.DecisionProvider.choose',return_value=self.decision):
             result=self.g.navigate(self.args,1)
@@ -95,6 +95,29 @@ class NavigationTests(unittest.TestCase):
         self.g.cancelled.add(1)
         with patch.object(self.g,'run_browser',return_value='owned') as run, patch.object(self.g,'observe') as observe: result=self.g.navigate(self.args,1)
         self.assertFalse(result['verified']); observe.assert_not_called()
+        run.assert_not_called()
+        self.assertEqual(result['browserCalls'], 0)
+    def test_already_satisfied_task_does_not_read_provider_key(self):
+        with patch.object(self.g,'run_browser',return_value='owned'), patch.object(self.g,'observe',return_value={**self.state,'found':True}), patch.object(self.g,'read_provider_key',side_effect=AssertionError('Unexpected key access')) as key, patch.object(self.g,'provider') as provider:
+            result=self.g.navigate(self.args,1)
+        self.assertTrue(result['verified']); provider.assert_not_called(); key.assert_not_called()
+        self.assertEqual(result['browserCalls'],2)
+    def test_no_eligible_links_does_not_load_provider(self):
+        with patch.object(self.g,'run_browser',return_value='owned'), patch.object(self.g,'observe',return_value={**self.state,'links':[]}), patch.object(self.g,'provider') as provider:
+            result=self.g.navigate(self.args,1)
+        self.assertEqual(result['failureCategory'],'no_links'); provider.assert_not_called()
+    def test_missing_key_when_choice_needed_escalates_without_following_link(self):
+        self.g.settings['provider']='typesafe'
+        with patch.object(self.g,'run_browser',return_value='owned') as run, patch.object(self.g,'observe',return_value=self.state), patch.object(self.g,'read_provider_key',return_value='') as key:
+            result=self.g.navigate(self.args,1)
+        self.assertFalse(result['verified']); self.assertEqual(result['failureCategory'],'provider_error')
+        self.assertEqual(run.call_count,1); key.assert_called_once_with('typesafe')
+    def test_combined_navigation_failure_never_retries_or_records_success(self):
+        with patch.object(self.g,'observe',return_value=self.state), patch.object(self.g,'run_browser',side_effect=['owned',ValueError('Navigation outcome unknown')]) as run, patch('decision.DecisionProvider.choose',return_value=self.decision):
+            result=self.g.navigate(self.args,1)
+        self.assertFalse(result['verified']); self.assertEqual(run.call_count,2)
+        self.assertEqual(result['attempts'][0]['to'],'https://example.com/docs')
+        self.assertEqual(result['browserCalls'],3)
     def test_provider_error_not_retried_or_fallback(self):
         with patch.object(self.g,'observe',return_value=self.state), patch.object(self.g,'run_browser',return_value='owned'), patch('decision.DecisionProvider.choose',side_effect=ValueError('Provider failed')) as choose: result=self.g.navigate(self.args,1)
         self.assertEqual(choose.call_count,1); self.assertFalse(result['verified']); self.assertEqual(result['reason'],'Provider failed')
@@ -103,7 +126,7 @@ class NavigationTests(unittest.TestCase):
             with self.assertRaises(ValueError): public_url(url)
         _, origin = public_url('https://example.com')
         with self.assertRaises(ValueError): public_url('https://other.com',origin)
-    def test_invalid_arguments_and_missing_provider_before_tab(self):
+    def test_invalid_arguments_before_tab(self):
         with patch.object(self.g,'run_browser') as run:
             for change in [{'maxSteps':True},{'maxSteps':7},{'successText':'a'},{'dryRun':'yes'},{'unknown':'x'}]:
                 with self.assertRaises(ValueError): self.g.navigate({**self.args,**change},1)

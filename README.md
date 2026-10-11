@@ -4,7 +4,7 @@
 
 OpenRagnar connects an MCP client such as Claude Desktop or Codex to a separately running [BrowserOS Neo](https://github.com/browseros-ai/BrowserOS) instance. Neo executes browser actions. OpenRagnar controls how much browser context comes back and can delegate bounded navigation to Jev or another configured model.
 
-Version **0.4.6** targets Apple Silicon Macs running macOS 14+. This is an experimental portfolio project. Preview DMGs are ad-hoc signed, not notarized. Neo is required and is not bundled.
+Version **0.4.7** targets Apple Silicon Macs running macOS 14+. This is an experimental portfolio project. Preview DMGs are ad-hoc signed, not notarized. Neo is required and is not bundled.
 
 Download the DMG from [GitHub Releases](https://github.com/RaDeleon/OpenRagnar/releases). While this repository is private, downloads require repository access. Each release includes a SHA-256 checksum and a packaging verification report. Version tags trigger a tested Apple Silicon build and attach the DMG automatically.
 
@@ -85,7 +85,7 @@ Download an `aarch64-apple-darwin` Python 3.12 `install_only` archive from the o
 open dist/OpenRagnar.app
 ```
 
-This creates `dist/OpenRagnar-0.4.6-arm64.dmg`. Install the app in Applications before configuring clients. **Connectors → Connect Claude Desktop** backs up and merges a separate `openragnar` entry, preserving other servers. Reconnect the client after changes; old processes retain their loaded engine.
+This creates `dist/OpenRagnar-0.4.7-arm64.dmg`. Install the app in Applications before configuring clients. **Connectors → Connect Claude Desktop** backs up and merges a separate `openragnar` entry, preserving other servers. Reconnect the client after changes; old processes retain their loaded engine.
 
 Local builds are ad-hoc signed. The [release guide](docs/releases.md) covers isolated test builds, Developer ID signing, notarization and the feature → staging → main workflow. Public signing remains unverified pending Apple Developer enrollment; setting up these scripts does not make an existing DMG notarized.
 
@@ -154,7 +154,9 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s neo-personal -p 'test_
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s script -p 'test_*.py'
 ```
 
-The current source suites have 141 gateway/diagnostics/learning/vision tests and 20 release/settings tests, for 161 tests in total. GitHub Actions runs both Python suites and a separate native Swift compile check. Live checks are opt-in; the [benchmark procedure](docs/benchmarks.md) explains their effects and how to measure matched tasks.
+The current source suites have 148 gateway/diagnostics/learning/vision tests and 24 release/settings/readiness tests, for 172 tests in total. Page-side JavaScript readiness tests use Node when available; the native settings probe runs on macOS. GitHub Actions runs both Python suites and a separate native Swift compile check. Live checks are opt-in; the [benchmark procedure](docs/benchmarks.md) explains their effects and how to measure matched tasks.
+
+The 0.4.7 navigation pass removes one gateway-to-Neo round trip per followed link, defers key access and advisory recall until inference is needed, and waits for either the requested text or a usable link. A controlled linkless-page fixture avoids the former eight-second wait. See the [optimization review and measured limits](docs/validation/0.4.7-optimization-review.md).
 
 ## Source map
 

@@ -11,6 +11,7 @@ import urllib.parse
 from unittest.mock import patch
 from experience import ExperienceMemory
 from openragnar import OpenRagnarGateway
+from version import VERSION
 
 
 class ObservedLinkSelector:
@@ -39,7 +40,7 @@ def main():
         reports = []
         try:
             init = g.handle({'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-11-25',
-                             'capabilities':{},'clientInfo':{'name':'OpenRagnar controlled learning validation','version':'0.4.2'}}})
+                             'capabilities':{},'clientInfo':{'name':'OpenRagnar controlled learning validation','version':VERSION}}})
             assert 'error' not in init, init
             g.handle({'jsonrpc':'2.0','method':'notifications/initialized'})
             # No background uploads; the first recall is deliberately offline.
@@ -58,7 +59,7 @@ def main():
             first=g.handle({**request,'id':20}); second=g.handle({**request,'id':21})
             assert 'priorMatchingFailures' not in json.dumps(first)
             assert 'priorMatchingFailures' in json.dumps(second), second
-            result={'version':'0.4.2','runs':reports,'liveLinkAndTextVerification':True,'repeatFailureHint':True,
+            result={'version':VERSION,'runs':reports,'liveLinkAndTextVerification':True,'repeatFailureHint':True,
                     'providerCalled':False,'selector':'deterministic observed-link selector, not Jev',
                     'memoryCounters':{k:memory.snapshot()[k] for k in ('tasks_with_reuse','provider_calls_avoided','reused_tasks_verified','repeat_failure_hints')},
                     'remoteWriteReadback':False}
