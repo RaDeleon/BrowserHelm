@@ -5,6 +5,8 @@ import OSLog
     @Published var config = Configuration.load()
     @Published var key = ""
     @Published var storedKey = false
+    @Published var visionKey = ""
+    @Published var storedVisionKey = false
     @Published var status = "Full read/write browser tools are ready. Reconnect your MCP client to record new sessions."
     @Published var busy = false
     @Published var selectedTab = 0
@@ -16,6 +18,7 @@ import OSLog
     private var timer: Timer?
     init() {
         refreshKey()
+        refreshVisionKey()
         refreshDashboard()
         timer = Timer.scheduledTimer(withTimeInterval: 6, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refreshDashboard() }
@@ -56,6 +59,12 @@ import OSLog
         } catch { status = error.localizedDescription }
     }
     func refreshKey() { storedKey = Keys.has(config.provider); key = "" }
+    func refreshVisionKey() { storedVisionKey = Keys.has("openrouter"); visionKey = "" }
+    func selectVisionProvider(_ provider: String) {
+        config.vision.selectProvider(provider)
+        // Keep a typed key when switching providers before saving.
+        storedVisionKey = Keys.has("openrouter")
+    }
     func checkDiagnosticsConnection() {
         guard !busy else { return }
         busy = true; status = "Checking a fresh Neo connection without changing browser tabs…"
@@ -68,13 +77,19 @@ import OSLog
     }
     @discardableResult func save() -> Bool {
         do {
+            if config.provider == "openrouter" && !key.isEmpty && !visionKey.isEmpty && key.trimmingCharacters(in: .whitespacesAndNewlines) != visionKey.trimmingCharacters(in: .whitespacesAndNewlines) {
+                throw AppError(text: "Decision and vision share the saved OpenRouter key. Enter the same key in both fields, or fill only one.")
+            }
             if config.provider != "none" && !key.isEmpty { try Keys.save(key.trimmingCharacters(in: .whitespacesAndNewlines), account: config.provider) }
-            try config.save(); refreshKey(); logger.info("Gateway settings saved")
-            status = "Settings saved. New MCP sessions use these settings. Restart Claude Desktop after changing the decision provider."
+            if !visionKey.isEmpty { try Keys.save(visionKey.trimmingCharacters(in: .whitespacesAndNewlines), account: "openrouter") }
+            config.vision.profiles[config.vision.provider] = Profile(endpoint: config.vision.endpoint, model: config.vision.model)
+            try config.save(); refreshKey(); refreshVisionKey(); logger.info("Gateway settings saved")
+            status = "Settings saved. Vision model switches apply to the next request. Reconnect after first enabling vision or changing the decision provider."
             return true
         } catch { status = error.localizedDescription; return false }
     }
-    func removeKey() { do { try Keys.remove(config.provider); refreshKey(); status = "API key removed." } catch { status = error.localizedDescription } }
+    func removeKey() { do { try Keys.remove(config.provider); refreshKey(); refreshVisionKey(); status = "API key removed." } catch { status = error.localizedDescription } }
+    func removeVisionKey() { do { try Keys.remove("openrouter"); refreshVisionKey(); refreshKey(); status = "Shared OpenRouter key removed." } catch { status = error.localizedDescription } }
     func test(_ mode: String) {
         guard save() else { return }; busy = true; status = "Checking connection…"
         DispatchQueue.global().async {

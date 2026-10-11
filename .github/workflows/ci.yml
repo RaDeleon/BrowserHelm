@@ -49,3 +49,5 @@ jobs:
       - name: Compile native app
         working-directory: mac-app
         run: swift build -c release --disable-sandbox
+      - name: Verify native settings migration and provider switching
+        run: python3 script/test_vision_settings.py

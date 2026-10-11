@@ -20,6 +20,6 @@ if CommandLine.arguments.contains("--provider-key") {
         interrupt.setEventHandler { if process.isRunning { process.terminate() } }; interrupt.resume()
         try process.run(); process.waitUntilExit(); exit(process.terminationStatus)
     } catch { fputs("OpenRagnar: \(error.localizedDescription)\n", stderr); exit(1) }
-} else if let mode = CommandLine.arguments.first(where: { ["--test-browser", "--test-provider", "--dashboard", "--diagnostics", "--test-memory", "--sync-memory"].contains($0) }) {
+} else if let mode = CommandLine.arguments.first(where: { ["--test-browser", "--test-provider", "--test-vision", "--dashboard", "--diagnostics", "--test-memory", "--sync-memory"].contains($0) }) {
     do { print(try Runner.test(mode)) } catch { fputs("\(error.localizedDescription)\n", stderr); exit(1) }
 } else { OpenRagnarApp.main() }
