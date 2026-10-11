@@ -59,6 +59,8 @@ class Metrics:
         os.chmod(self.path.parent, 0o700)
         self.sid = uuid.uuid4().hex
         with self.db() as db:
+            # Readers in the dashboard must not block concurrent MCP writers.
+            db.execute('PRAGMA journal_mode=WAL')
             db.executescript('''
             CREATE TABLE IF NOT EXISTS sessions (
               id TEXT PRIMARY KEY, client TEXT, label TEXT, started REAL, updated REAL,
@@ -102,7 +104,7 @@ class Metrics:
             columns = ['id','session_id','method','tool','started','finished','status','input_bytes',
                        'upstream_input_bytes','upstream_bytes','client_bytes','upstream_text','client_text','upstream_calls',
                        'provider_tokens','provider_calls','provider_unknown','media_count']
-            rid = uuid.uuid4().hex
+            rid = row.get('id') or uuid.uuid4().hex
             data = {**row, 'id': rid, 'session_id':self.sid}
             db.execute('INSERT INTO requests('+','.join(columns)+') VALUES('+','.join('?' for _ in columns)+')',
                        [data[c] for c in columns])

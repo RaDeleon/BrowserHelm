@@ -8,6 +8,7 @@ import OSLog
     @Published var status = "Full read/write browser tools are ready. Reconnect your MCP client to record new sessions."
     @Published var busy = false
     @Published var selectedTab = 0
+    @Published var diagnosticQuery = ""
     @Published var dashboard: Dashboard?
     @Published var loadingDashboard = false
     @Published var dashboardError = ""
@@ -55,6 +56,16 @@ import OSLog
         } catch { status = error.localizedDescription }
     }
     func refreshKey() { storedKey = Keys.has(config.provider); key = "" }
+    func checkDiagnosticsConnection() {
+        guard !busy else { return }
+        busy = true; status = "Checking a fresh Neo connection without changing browser tabs…"
+        DispatchQueue.global().async {
+            let message: String
+            do { _ = try Runner.test("--test-browser"); message = "A fresh Neo connection passed MCP negotiation and tool discovery. Existing client connections may still need a restart." }
+            catch { message = "Neo connection check failed. See Diagnostics for the recorded error." }
+            DispatchQueue.main.async { self.status = message; self.busy = false; self.refreshDashboard() }
+        }
+    }
     @discardableResult func save() -> Bool {
         do {
             if config.provider != "none" && !key.isEmpty { try Keys.save(key.trimmingCharacters(in: .whitespacesAndNewlines), account: config.provider) }

@@ -30,6 +30,8 @@ Run from the root after building, with Neo running. Checks use your saved settin
 | `python3 neo-personal/live_full_access.py` | Opens an owned example.com tab, creates/fills/reads test DOM, checks output recovery and closes that tab. No decision-provider call. |
 | `python3 neo-personal/live_openragnar.py` | Defaults to `/Applications/OpenRagnar.app`, matching the installed Keychain identity. Override with `--app dist/OpenRagnar.app`. Public documentation navigation using your configured provider/key/server. Can incur provider charges; returns failure if completion is unverified. Leaves the owned tab for inspection. |
 | `python3 neo-personal/live_memory.py` | Deterministic public-documentation route, verified text, upload and remote recall with an empty local cache. No decision-model call; memory embedding costs may apply. Closes its owned tab. |
+| `python3 neo-personal/live_learning.py` | Three public-documentation navigation runs in a temporary cache. Verifies the third skips a decision request while checking the current link/text. Also exercises repeat-failure guidance with two controlled Neo errors. No decision-model call; closes its owned tabs. |
+| `python3 neo-personal/live_learning.py --remote` | Adds one explicitly test-tagged OpenViking outcome upload/readback, excluded from production hints/reuse. Memory embedding/storage costs may apply. |
 | `python3 script/verify_dmg.py` | Read-only DMG mount, signature/license checks and bundled SSL/SQLite imports. Offline; no provider key or Neo needed. |
 | `python3 script/verify_dmg.py --live` | Adds relocated MCP and public HTTPS checks. Requires Neo; no decision-provider call. |
 

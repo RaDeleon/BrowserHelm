@@ -191,14 +191,26 @@ class Gateway:
         try:
             response = self.opener.open(req, timeout=120)
         except urllib.error.HTTPError as error:
+            hook = getattr(self, 'transport_error', None)
+            if hook:
+                hook(error, error.code)
             raw = error.read(MAX_WIRE_BYTES + 1)
             try:
                 value = json.loads(raw)
                 if isinstance(value, dict) and "error" in value:
+                    # An HTTP transport rejection can have id=null. Correlate its
+                    # reply to this request so stdio clients can surface the error.
+                    value['jsonrpc'] = '2.0'
+                    value['id'] = request.get('id')
                     return value
             except (ValueError, UnicodeDecodeError):
                 pass
             raise RuntimeError("Neo HTTP error %s; check the installed browser and endpoint" % error.code)
+        except Exception as error:
+            hook = getattr(self, 'transport_error', None)
+            if hook:
+                hook(error)
+            raise
         with response:
             with self.lock:
                 session = response.headers.get("Mcp-Session-Id")

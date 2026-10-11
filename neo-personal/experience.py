@@ -1,6 +1,8 @@
 """Scoped OpenViking browser experiences; no model-generated reflection or page dumps."""
 import hashlib
+import hmac
 import json
+import os
 import pathlib
 import re
 import sqlite3
@@ -12,6 +14,43 @@ import uuid
 
 ROOT = 'viking://~/memories/experiences/openragnar'
 MAX_HINT_BYTES = 1600
+LESSONS = {
+    'stale_link': 'The selected link or page changed. Re-observe instead of replaying the old action.',
+    'step_budget': 'The route did not reach the text postcondition within its step budget. Consider another observed route.',
+    'no_links': 'No eligible link remained. Return control to the main agent.',
+    'uncertain': 'The provider was uncertain. Do not treat the attempted route as a proven success.',
+    'provider_error': 'The decision provider failed. Check its connection; do not repeat browser writes.',
+    'execution_error': 'A browser step failed. Inspect current state before another attempt.',
+    'cancelled': 'Execution stopped at its cancellation or time budget. Completion was not verified.',
+}
+
+
+def same_task(document, start, goal, needle, age=90*86400):
+    """Match intent as well as host/postcondition; never transfer a route to another goal."""
+    if not isinstance(document, dict) or document.get('schema') not in (1, 2) or document.get('source') != 'openragnar':
+        return False
+    if document.get('kind', 'navigation') != 'navigation' or document.get('test') or 'validation' in str(document.get('provider', '')).lower():
+        return False
+    created = document.get('created')
+    return (type(created) in (int, float) and 0 <= time.time()-created <= age and
+            document.get('host') == urllib.parse.urlsplit(start).netloc and
+            document.get('start') == safe_url(start) and
+            str(document.get('goal', '')).strip().casefold() == clean(goal).strip().casefold() and
+            document.get('successText') == clean(needle, 200))
+
+
+def route_data(document, host, key='route'):
+    rows = document.get(key, [])
+    if not isinstance(rows, list): return []
+    route = []
+    for row in rows[:6]:
+        if not isinstance(row, dict): continue
+        try:
+            source, target = safe_url(row.get('from', '')), safe_url(row.get('to', ''))
+            if not source or not target or urllib.parse.urlsplit(source).netloc != host or urllib.parse.urlsplit(target).netloc != host: continue
+            route.append({'from': source, 'to': target, 'label': clean(row.get('label', ''), 80)})
+        except ValueError: continue
+    return route
 
 
 def clean(value, limit=500):
@@ -50,7 +89,12 @@ class ExperienceMemory:
               synced REAL, retry_at REAL DEFAULT 0, lease REAL DEFAULT 0,
               destination TEXT NOT NULL DEFAULT '');
               CREATE TABLE IF NOT EXISTS memory_state (key TEXT PRIMARY KEY, value TEXT);
+              CREATE TABLE IF NOT EXISTS tool_history (
+                id TEXT PRIMARY KEY, destination TEXT, tool TEXT, signature TEXT,
+                created REAL, status TEXT, category TEXT);
+              CREATE INDEX IF NOT EXISTS tool_history_match ON tool_history(destination,signature,created);
             ''')
+            db.execute('INSERT OR IGNORE INTO memory_state VALUES (?,?)', ('request_hmac_key', os.urandom(32).hex()))
         self.path.chmod(0o600)
 
     @property
@@ -61,7 +105,7 @@ class ExperienceMemory:
             return self.initial_enabled
 
     def db(self):
-        return sqlite3.connect(str(self.path), timeout=1)
+        return sqlite3.connect(str(self.path), timeout=.1)
 
     def state(self, key, value):
         with self.db() as db:
@@ -75,7 +119,7 @@ class ExperienceMemory:
             raise ValueError('Invalid OpenViking endpoint')
         if p.scheme != 'https' and not (p.scheme == 'http' and p.hostname in ('localhost','127.0.0.1','::1')):
             raise ValueError('OpenViking requires HTTPS or a local endpoint')
-        headers = {'Content-Type': 'application/json', 'User-Agent': 'openragnar/0.4.0'}
+        headers = {'Content-Type': 'application/json', 'User-Agent': 'openragnar/0.4.2'}
         if c.get('api_key'):
             headers['Authorization'] = 'Bearer ' + c['api_key']
         # Match the installed plugin: identity headers only in trusted mode.
@@ -125,13 +169,126 @@ class ExperienceMemory:
         self.stop.set()
         if self.worker: self.worker.join(timeout=3)
 
-    def recall(self, start, goal, needle):
-        if not self.enabled: return []
+    def local_documents(self):
+        with self.db() as db:
+            rows = db.execute('SELECT document FROM experiences WHERE destination=? AND document NOT LIKE ? ORDER BY created DESC LIMIT 200',
+                              (self.destination(), '%"kind": "tool_outcome"%')).fetchall()
         documents = []
-        deadline = time.monotonic()+3
+        for row in rows:
+            try: documents.append(json.loads(row[0]))
+            except (ValueError, TypeError): continue
+        return documents
+
+    def increment(self, values):
+        with self.db() as db:
+            db.execute('BEGIN IMMEDIATE')
+            for key, amount in values.items():
+                if not amount: continue
+                old = db.execute('SELECT value FROM memory_state WHERE key=?', (key,)).fetchone()
+                db.execute('INSERT OR REPLACE INTO memory_state VALUES (?,?)', (key, str((int(old[0]) if old else 0)+amount)))
+
+    def choose_verified_route(self, start, goal, needle, current, options):
+        """Skip a provider choice only after two locally observed successes, never from remote hints alone."""
+        if not self.enabled: return None
+        documents = [d for d in self.local_documents() if same_task(d, start, goal, needle, 30*86400)]
+        task_key = self.signature('navigation_task', [start, goal, needle])
+        documents = [d for d in documents if d.get('taskKey') == task_key or
+                     (not d.get('taskKey') and goal == clean(goal) and needle == clean(needle, 200))]
+        candidates = []
+        host = urllib.parse.urlsplit(start).netloc
+        for choice, option in options.items():
+            if not isinstance(option, dict): continue
+            edge = (current, option.get('url'))
+            evidence, failure_at = {}, 0
+            for document in documents:
+                edges = [(r['from'], r['to']) for r in route_data(document, host)]
+                attempts = [(r['from'], r['to']) for r in route_data(document, host, 'attempts')]
+                if document.get('verified') is True and document.get('status') == 'complete' and edge in edges:
+                    evidence[document.get('id')] = document['created']
+                elif document.get('verified') is not True and edge in edges+attempts:
+                    failure_at = max(failure_at, document['created'])
+            support = sum(created > failure_at for identifier, created in evidence.items() if identifier)
+            if support >= 2: candidates.append((choice, support))
+        # Conflicting successful paths go back to the provider rather than choosing arbitrarily.
+        if len(candidates) != 1: return None
+        return {'choice': candidates[0][0], 'probability': None, 'evidence': 'two or more local text-verified runs; live link recheck required',
+                'usage': {}, 'model': 'local-verified-route', 'latencySeconds': 0, 'localRouteReuse': True}
+
+    def record_route_use(self, avoided, followed, completed):
+        if not self.enabled: return
+        self.increment({'provider_calls_avoided': avoided, 'reused_steps': followed,
+                        'tasks_with_reuse': int(avoided > 0), 'reused_tasks_verified': int(avoided > 0 and completed)})
+
+    def signature(self, tool, arguments):
+        with self.db() as db:
+            key = bytes.fromhex(db.execute("SELECT value FROM memory_state WHERE key='request_hmac_key'").fetchone()[0])
+        payload = json.dumps([tool, arguments], sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()
+        return hmac.new(key, payload, hashlib.sha256).hexdigest()
+
+    def prior_tool_failure(self, tool, arguments):
+        if not self.enabled: return None
+        with self.db() as db:
+            rows = db.execute('SELECT status,category FROM tool_history WHERE destination=? AND signature=? AND created>? ORDER BY created DESC,rowid DESC LIMIT 20',
+                              (self.destination(), self.signature(tool, arguments), time.time()-14*86400)).fetchall()
+        failed = []
+        for status, category in rows:
+            if status != 'error': break  # A later accepted request retires the old warning.
+            failed.append(category)
+        if not failed: return None
+        from diagnostics import issue
+        detail = issue(failed[0])
+        return {'priorMatchingFailures': len(failed), 'category': detail['category'], 'advice': detail['advice'],
+                'scope': 'identical tool arguments; MCP request outcome only'}
+
+    def capture_tool(self, tool, arguments, row, hint_shown=False):
+        if not self.enabled or tool.startswith('openragnar_'): return
+        from diagnostics import issue
+        category = issue((row.get('diagnostic') or {}).get('category', 'ok'))['category']
+        identifier = row['id']
+        previous = self.prior_tool_failure(tool, arguments)
+        with self.db() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('DELETE FROM tool_history WHERE created<?', (time.time()-14*86400,))
+            db.execute('INSERT OR IGNORE INTO tool_history VALUES (?,?,?,?,?,?,?)',
+                       (identifier, self.destination(), clean(tool, 80), self.signature(tool, arguments), row['finished'], row['status'], category))
+            db.execute('DELETE FROM tool_history WHERE id IN (SELECT id FROM tool_history ORDER BY created DESC LIMIT -1 OFFSET 10000)')
+        if hint_shown: self.increment({'repeat_failure_hints': 1})
+        # Sync reusable failure/recovery evidence, not every successful low-level request.
+        if row['status'] == 'error' or previous:
+            document = {'schema': 2, 'source': 'openragnar', 'kind': 'tool_outcome', 'id': identifier, 'created': row['finished'],
+                        'test': False, 'goal': clean(tool, 80)+' request '+('failed' if row['status']=='error' else 'accepted after failure'),
+                        'verified': False, 'verification': 'MCP outcome only; task completion unknown', 'tool': clean(tool, 80),
+                        'status': row['status'], 'category': category, 'lesson': issue(category)['advice']}
+            self.enqueue(document)
+
+    def enqueue(self, document):
         try:
             destination = self.destination()
+            with self.db() as db:
+                db.execute('BEGIN IMMEDIATE')
+                db.execute('DELETE FROM experiences WHERE synced IS NOT NULL AND created < ?', (time.time()-90*86400,))
+                if db.execute('SELECT COUNT(*) FROM experiences WHERE synced IS NULL').fetchone()[0] >= 500:
+                    return 'queue full; outcome not stored'
+                db.execute('INSERT OR IGNORE INTO experiences (id,document,created,destination) VALUES (?,?,?,?)',
+                           (document['id'], json.dumps(document), document['created'], destination))
+                db.execute('DELETE FROM experiences WHERE id IN (SELECT id FROM experiences WHERE synced IS NOT NULL ORDER BY created DESC LIMIT -1 OFFSET 3000)')
+            return 'queued'
+        except Exception:
+            return 'memory storage unavailable; browser outcome unchanged'
+
+    def recall(self, start, goal, needle):
+        if not self.enabled: return []
+        documents = self.local_documents()
+        deadline = time.monotonic()+3
+        try:
+            if any(same_task(d, start, goal, needle) and (route_data(d, urllib.parse.urlsplit(start).netloc) or d.get('failureCategory') in LESSONS) for d in documents):
+                self.state('recall_source', 'Local cache')
+                return self.hints(documents, start, goal, needle)
+            destination = self.destination()
             with self.db() as db: identity = dict(db.execute('SELECT key,value FROM memory_state').fetchall())
+            if identity.get('recall_failed_destination') == destination and time.time()-float(identity.get('recall_failed_at',0)) < 30:
+                self.state('recall_source', 'Local fallback; service retry deferred')
+                return self.hints(documents, start, goal, needle)
             if identity.get('identity_destination') != destination:
                 self.test()
                 with self.db() as db: identity = dict(db.execute('SELECT key,value FROM memory_state').fetchall())
@@ -149,67 +306,50 @@ class ExperienceMemory:
                 raw = result if isinstance(result,str) else result.get('content','')
                 if len(raw) <= 12000: documents.append(json.loads(raw))
             self.state('connection', 'Connected')
+            self.state('recall_source', 'OpenViking')
         except Exception:
             self.state('connection', 'Unavailable; using local experience cache')
+            self.state('recall_failed_at', time.time())
+            self.state('recall_failed_destination', self.destination())
         # Newly saved records can be used while semantic indexing is pending.
-        with self.db() as db:
-            rows = db.execute('SELECT document FROM experiences WHERE destination=? ORDER BY created DESC LIMIT 100', (self.destination(),)).fetchall()
-        documents.extend(json.loads(r[0]) for r in rows)
+        return self.hints(documents, start, goal, needle)
+
+    def hints(self, documents, start, goal, needle):
         hints, seen = [], set()
         host = urllib.parse.urlsplit(start).netloc
         for d in documents:
-            if not isinstance(d,dict) or d.get('schema') != 1 or d.get('source') != 'openragnar' or d.get('test'):
-                continue
-            if d.get('host') != host or d.get('successText') != clean(needle,200) or d.get('id') in seen:
-                continue
-            created = d.get('created',0)
-            if type(created) not in (int,float) or not 0 <= time.time()-created <= 90*86400: continue
-            routes = d.get('route', [])
-            if not isinstance(routes,list): continue
-            route = []
-            for r in routes[:6]:
-                if not isinstance(r,dict): continue
-                try:
-                    source,target = safe_url(r.get('from','')),safe_url(r.get('to',''))
-                    if not source or not target or urllib.parse.urlsplit(source).netloc != host or urllib.parse.urlsplit(target).netloc != host: continue
-                    route.append({'from':source,'to':target,'label':clean(r.get('label',''),80)})
-                except ValueError: continue
+            if not same_task(d, start, goal, needle) or d.get('id') in seen: continue
+            route = route_data(d, host)
+            failure = d.get('failureCategory')
             hint = {'outcome': 'successText found' if d.get('verified') is True else 'postcondition not verified',
                     'route': route, 'browserCalls': d.get('browserCalls',0) if type(d.get('browserCalls')) is int else 0}
-            if not route: continue
+            if failure in LESSONS:
+                hint.update(lesson=LESSONS[failure], attempted=route_data(d, host, 'attempts'))
+            if not route and failure not in LESSONS: continue
             seen.add(d.get('id')); candidate = hints+[hint]
             if len(json.dumps(candidate).encode()) > MAX_HINT_BYTES: continue
             hints = candidate
             if len(hints) == 2: break
         self.state('last_recalled', len(hints))
-        if hints:
-            with self.db() as db:
-                old = db.execute("SELECT value FROM memory_state WHERE key='tasks_with_recall'").fetchone()
-                db.execute('INSERT OR REPLACE INTO memory_state VALUES (?,?)',('tasks_with_recall',str(int(old[0]) + 1 if old else 1)))
+        if hints: self.increment({'tasks_with_recall': 1})
         return hints
 
     def capture(self, start, goal, needle, report, route, test=False):
         if not self.enabled or report.get('status') == 'proposal': return 'not saved'
         identifier = str(uuid.uuid4())
-        document = {'schema':1, 'source':'openragnar', 'id':identifier, 'created':time.time(),
-            'test':test, 'host':urllib.parse.urlsplit(start).netloc, 'start':safe_url(start),
+        document = {'schema':2, 'source':'openragnar', 'kind':'navigation', 'id':identifier, 'created':time.time(),
+              'test':test or 'validation' in str(report.get('provider','')).lower(), 'host':urllib.parse.urlsplit(start).netloc, 'start':safe_url(start),
             'goal':clean(goal), 'successText':clean(needle,200), 'verified':report.get('verified') is True,
             'verification':'literal successText presence only', 'status':report.get('status'),
             'provider':clean(report.get('provider',''),60), 'browserCalls':report.get('browserCalls',0),
             'model':clean((report.get('decisions') or [{}])[-1].get('model',''),100),
-            'route':[{'from':safe_url(r['from']), 'to':safe_url(r['to']), 'label':clean(r['label'],80)} for r in route[:6]]}
-        try:
-            destination = self.destination()
-            with self.db() as db:
-                db.execute('BEGIN IMMEDIATE')
-                db.execute('DELETE FROM experiences WHERE synced IS NOT NULL AND created < ?', (time.time()-90*86400,))
-                if db.execute('SELECT COUNT(*) FROM experiences WHERE synced IS NULL').fetchone()[0] >= 500:
-                    return 'queue full; outcome not stored'
-                db.execute('INSERT INTO experiences (id,document,created,destination) VALUES (?,?,?,?)',
-                    (identifier,json.dumps(document),document['created'],destination))
-            return 'queued'
-        except Exception:
-            return 'memory storage unavailable; browser outcome unchanged'
+              'elapsedSeconds':report.get('elapsedSeconds'),
+              'taskKey':self.signature('navigation_task', [start, goal, needle]),
+              'providerCallsAvoided':report.get('memory',{}).get('providerCallsAvoided',0),
+              'failureCategory':report.get('failureCategory') if report.get('failureCategory') in LESSONS else None,
+              'route':route_data({'route':route}, urllib.parse.urlsplit(start).netloc),
+              'attempts':route_data(report, urllib.parse.urlsplit(start).netloc, 'attempts')}
+        return self.enqueue(document)
 
     def sync(self, limit=2):
         if not self.enabled: return {'uploaded':0, 'disabled':True}
@@ -242,10 +382,17 @@ class ExperienceMemory:
             state=dict(db.execute('SELECT key,value FROM memory_state').fetchall())
             count,pending=db.execute('SELECT COUNT(*),COALESCE(SUM(synced IS NULL),0) FROM experiences').fetchone()
             recent=db.execute('SELECT document,synced FROM experiences ORDER BY created DESC LIMIT 10').fetchall()
+            requests,failures=db.execute("SELECT COUNT(*),COALESCE(SUM(status='error'),0) FROM tool_history").fetchone()
         try: endpoint=self.credentials()[0]
         except Exception: endpoint='Existing OpenViking connection unavailable'
         return {'enabled':self.enabled, 'endpoint':endpoint, 'collection':self.root,
             'connection':state.get('connection','Not checked'), 'saved':count-pending, 'pending':pending,
             'tasks_with_recall':int(state.get('tasks_with_recall',0)), 'last_recalled':int(state.get('last_recalled',0)),
+              'tasks_with_reuse':int(state.get('tasks_with_reuse',0)), 'reused_steps':int(state.get('reused_steps',0)),
+              'reused_tasks_verified':int(state.get('reused_tasks_verified',0)), 'provider_calls_avoided':int(state.get('provider_calls_avoided',0)),
+              'repeat_failure_hints':int(state.get('repeat_failure_hints',0)), 'tool_requests_seen':requests, 'tool_failures':failures,
+              'recall_source':state.get('recall_source','Not used'),
             'recent':[{'id':json.loads(r[0])['id'], 'goal':json.loads(r[0])['goal'],
+                  'kind':json.loads(r[0]).get('kind','navigation'), 'failure_category':json.loads(r[0]).get('failureCategory') or json.loads(r[0]).get('category'),
+                  'status':json.loads(r[0]).get('status','unknown'), 'test':json.loads(r[0]).get('test',False),
                 'verified':json.loads(r[0])['verified'], 'created':json.loads(r[0])['created'], 'synced':r[1] is not None} for r in recent]}

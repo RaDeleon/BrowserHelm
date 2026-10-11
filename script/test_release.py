@@ -11,6 +11,7 @@ import unittest
 from unittest.mock import patch
 import notarize_dmg
 import release_support as release
+import release_metadata
 
 
 def developer_signature(**overrides):
@@ -20,6 +21,21 @@ def developer_signature(**overrides):
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_tag_must_match_source_version(self):
+        self.assertEqual(release_metadata.validate_tag('v0.4.3', '0.4.3'), 'v0.4.3')
+        for tag in ('v0.4.2', 'main', '0.4.3', 'v0.4.3\nextra', 'v0.4.3;echo nope'):
+            with self.subTest(tag=tag), self.assertRaises(ValueError):
+                release_metadata.validate_tag(tag, '0.4.3')
+
+    def test_source_version_is_read_without_executing_code(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = pathlib.Path(directory) / 'version.py'
+            source.write_text("raise RuntimeError('must not execute')\nVERSION='0.4.3'\nBUILD='8'\n")
+            self.assertEqual(release_metadata.build_metadata(source), {'VERSION': '0.4.3', 'BUILD': '8'})
+            source.write_text("VERSION='../other'\nBUILD='8'\n")
+            with self.assertRaises(ValueError):
+                release_metadata.build_metadata(source)
+
     def test_adhoc_cannot_pass_release_policy(self):
         with self.assertRaisesRegex(ValueError, 'local/test'):
             release.require_developer_id(developer_signature(authority=None))

@@ -1,4 +1,4 @@
-# OpenRagnar 0.4.0: personal macOS execution gateway
+# OpenRagnar 0.4.2: personal macOS execution gateway
 
 A separately named macOS companion for installed BrowserOS Neo. Not a Chromium fork. Claude Desktop and Codex use its stdio MCP executable; Neo performs browser actions. Jev or a chosen model makes bounded navigation decisions inside the gateway.
 
@@ -31,6 +31,26 @@ args = ["--mcp"]
 Cloud providers receive the goal, success phrase, page URL/title, and at most 60 candidate links/labels. They do not receive screenshots or the full page text. Local models can keep the decision request on your Mac; a local server may still route to a cloud model if you configure it that way. No provider is contacted in Gateway-only mode or for regular Neo tools.
 
 Sources: [Jev API](https://docs.typesafe.ai/api), [OpenRouter structured output](https://openrouter.ai/docs/guides/features/structured-outputs), [Ollama compatibility](https://docs.ollama.com/api/openai-compatibility), [LM Studio server](https://lmstudio.ai/docs/developer/core/server), [Bionic](https://lmstudio.ai/docs/bionic).
+
+## Diagnostics and debugging (0.4.1)
+
+Open **Diagnostics** to search errors, warnings and successful requests by tool, category, code or correlation ID. Select a row for its explanation, exception type when available, HTTP/MCP code and suggested next step. **Sessions → Problems only** filters unsuccessful requests; select a request and choose **View request diagnostics**. Sessions initially selects the newest retained session with tool requests, rather than mixing all sessions.
+
+**App builds & connections** shows the current app version/fingerprint, recorded connection versions and negotiated protocols, and running MCP launcher paths. A path differing from Claude's configured launcher is flagged. Older processes cannot report their loaded build: finish their active task, then restart the client to use the configured app and begin recording detailed diagnostics. A matching path alone does not prove an old process loaded the latest app contents.
+
+**Check Neo connection** performs fresh MCP negotiation and tool discovery using saved settings. It does not change browser tabs, save settings or contact the decision provider. Passing this check does not prove an existing client connection is healthy. **Export report** saves the displayed diagnostics snapshot as a local JSON file for review and sharing. The report is never automatically uploaded.
+
+New connections write structured events to private `~/Library/Application Support/OpenRagnar/diagnostics.sqlite` and safe summaries to the client's MCP stderr log. The database retains up to 10,000 events / 14 days; the UI and export display the newest 500 combined records. Logging failures never repeat browser actions. Diagnostics remain independent of token-counter storage. Neo `run` failures expressed as `structuredContent.ok=false` are recognized before compaction, even if the outer MCP envelope lacks `isError`.
+
+For older builds, Diagnostics reads unsuccessful rows from the counter database and error codes from the last 256 KiB of `~/Library/Logs/Claude/mcp-server-openragnar.log`. These are labeled `legacy-counters` or `claude-mcp-log`; original error details and correlation cannot be recovered. Both sources can describe the same failure, so the error count is a count of displayed diagnostic records, not unique failed tasks or Claude API errors.
+
+Diagnostics stores fixed error classifications and suggested actions, not raw exception messages, tool arguments/results, browser URLs/page contents, API keys or model reasoning. Exported metadata includes client names, app paths with the home directory abbreviated, timing and correlation IDs. Review the file before sharing it. Claude model/quota failures that never reach the local MCP connector are outside this gateway's visibility.
+
+Read-only CLI report:
+
+```sh
+/Applications/OpenRagnar.app/Contents/MacOS/OpenRagnar --diagnostics
+```
 
 ## First delegated trial
 
@@ -79,15 +99,21 @@ Existing client processes continue using their already-loaded engine until recon
 
 The 0.3.0 packaged build was verified against the installed Neo with MCP 2025-11-25 and all 26 tools. A fresh owned example.com tab passed granular DOM writing, snapshot refs, act fill, verified readback and large-output retrieval, then was closed. The GUI displayed live Neo stats, local connector entries and real request counters. Regular browser tools no longer unlock provider keys at startup; provider credentials are fetched through a private native helper only when needed. macOS may ask you to allow Keychain access again after a local ad-hoc rebuild.
 
-## OpenViking experience memory (0.4.0)
+## OpenViking experience memory and learning (0.4.2)
 
-Enable **Settings → OpenViking memory → Learn from delegated navigation outcomes**. OpenRagnar uses the existing private `~/.openviking/ovcli.conf` URL and API key, with HTTPS or a loopback HTTP endpoint. Change that connection in OpenViking's own configuration. No memory-service credential is copied into app settings, MCP configuration, logs, or this repository. The Memory page and Connectors page show the connection, queued/uploaded outcomes, tasks with recalled hints, and recent outcomes. **Test OpenViking** checks the live service; **Sync pending** sends up to five pending files.
+Enable **Settings → OpenViking memory → Learn from navigation and request outcomes**. OpenRagnar uses the existing private `~/.openviking/ovcli.conf` URL and API key, with HTTPS or a loopback HTTP endpoint. Change that connection in OpenViking's own configuration. No memory-service credential is copied into app settings, MCP configuration, logs, or this repository. The Memory page and Connectors page show the connection, queued/uploaded outcomes, tasks with recalled hints, and recent outcomes. **Test OpenViking** checks the live service; **Sync pending** sends up to five pending files.
 
-Before `openragnar_navigate` decisions, it retrieves only its collection at `viking://~/memories/experiences/openragnar`, validates authored records against the authenticated user, current website and requested success phrase, and offers up to two routes with a total 1.6 KB hint budget. Every selected link must still exist on the current page. Past outcomes are untrusted advisory data, never instructions or evidence of current success. Newly recorded local outcomes remain useful while indexing is pending. Direct Neo read/write calls are not automatically memorized; the gateway cannot infer their overall goals or verify their outcomes.
+Before `openragnar_navigate` decisions, it checks the local cache first, then OpenViking's collection at `viking://~/memories/experiences/openragnar` when matching local evidence is absent. Records must match the start URL, goal and requested success phrase. Up to two outcomes fit within a total 1.6 KB hint budget. Successes supply routes; failures supply fixed lessons and attempted links, even when execution failed before any link was followed. Memory never supplies instructions or evidence of current completion.
+
+After **two separate locally recorded, text-verified successes** for the same task within 30 days, the gateway can choose a route link without calling Jev. The link must be among the current observed options and pass a fresh live-page check. The requested text is checked after navigation. Conflicting routes, missing links, changed goals, validation/test records or a later failure fall back to the provider. Two new successes after a route failure are required to restore eligibility. Remote memories alone cannot seed automatic route reuse. Exact local task fingerprints prevent redacted goals from being merged.
+
+Direct tools also record metadata-only MCP outcomes locally. A repeated failure with **identical tool arguments** adds fixed guidance to the returned error for Claude/Codex; a later accepted request retires that warning. HMAC fingerprints match requests without retaining their code/arguments, and those fingerprints/keys are not uploaded in direct-request lessons. Failure and recovery classifications queue for OpenViking; successful low-level calls otherwise stay local. This does not infer the overall task goal, verify business completion, replay writes, rewrite arbitrary JavaScript, or route ordinary `run` calls through Jev.
+
+The **Memory → Learning in use** panel shows route-reuse tasks, provider calls avoided, reused tasks whose text was verified, retained direct requests/failures and repeat-failure hints shown. A recalled hint is not proof of improvement. Calls avoided are counts of decision requests actually skipped, not a token or latency estimate.
 
 After delegated navigation, it records the user-provided goal and success phrase, public routes and labels, provider/model and local text-presence verification. It excludes page bodies, screenshots, form contents, model reasoning and API credentials; common credential and email patterns are redacted. Do not put confidential material in a public-navigation goal. Dry runs are not saved as outcomes. Finding the literal phrase verifies only that postcondition, not the broader user goal. Failed tasks retain their unverified status. This is experience reuse, not Jev model retraining, and improvement requires repeated task benchmarks.
 
-A private `experiences.sqlite` outbox retains 90 days of uploaded records and up to 500 pending outcomes. Background uploads run every 30 seconds while an enabled MCP session is alive; unavailable services never retry browser actions. Retries reuse the same file URI, use cross-process leases, and back off at least 60 seconds. Queued files are pinned to the original endpoint and credential fingerprint; a changed connection cannot receive the old queue. Disabling memory stops new recall/capture/uploads in the updated engine; retained records are not deleted. Existing pre-0.4 MCP processes need reconnection.
+A private `experiences.sqlite` outbox retains 90 days / up to 3,000 uploaded records and up to 500 pending outcomes. Local direct-request history retains 14 days / up to 10,000 records. Background uploads run every 30 seconds while an enabled MCP session is alive; unavailable services never retry browser actions. Retries reuse the same file URI, use cross-process leases, and back off at least 60 seconds. Queued files are pinned to the original endpoint and credential fingerprint; a changed connection cannot receive the old queue. Disabling memory stops new capture, recall, reuse and uploads; retained records are not deleted. Existing MCP processes need reconnection to load this version.
 
 Uploads request OpenViking `vectors_only` processing, avoiding generated reflection and semantic-summary model calls. OpenViking embedding/storage costs remain separate and may still apply. The gateway does not know those billed tokens. The recalled hint text contributes to the decision provider's real usage; no token-savings guarantee is claimed. Service acceptance and eventual indexing are distinct states. A minimal integration-validation record is marked as a test and excluded from decision hints.
 
