@@ -18,7 +18,7 @@ flowchart LR
     O -->|bounded advisory recall when local cache misses| P
 ```
 
-Jev already **is a model**. OpenRagnar uses it for bounded text choices, not arbitrary browser planning or screenshot grounding. Ordinary `run`, `act`, `evaluate`, etc. continue to be planned by the main agent. BrowserOS Neo executes the actual browser operations. OpenViking is persistent context and retrieval, not a browser controller or a replacement for the planner.
+Jev already **is a model**. OpenRagnar uses it for bounded text choices, not arbitrary browser planning or screenshot grounding. Since 0.4.4, the optional `openragnar_visual_act` tool handles screenshot grounding through a separate local vision model. Ordinary `run`, `act`, `evaluate`, etc. continue to be planned by the main agent. BrowserOS Neo executes the actual browser operations. OpenViking is persistent context and retrieval, not a browser controller or a replacement for the planner.
 
 ## What changed
 
@@ -51,13 +51,15 @@ The selector was deterministic and made **no Jev/LLM call**. These timings show 
 
 ## Where a local model could help
 
-Use deterministic code and current DOM/accessibility references when they identify the target. Use the selected decision provider when the bounded intent is ambiguous. Consider a specialized local vision model **only for screenshot-to-control grounding when structured browser evidence is inadequate**. That is an alternative capability branch inside OpenRagnar, not a mandatory second reasoning pass after Jev.
+Use deterministic code and current DOM/accessibility references when they identify the target. Use the selected decision provider when the bounded intent is ambiguous. The 0.4.4 optional local vision branch handles **screenshot-to-control grounding when structured browser evidence is inadequate**. It is a separate capability, not a mandatory second reasoning pass after Jev. [Local vision](local-vision.md) documents setup and boundaries.
 
 Jev's current documentation specifies text-only input and no per-account fine-tuning. BrowserOS's BrowserVLM announcement describes a small vision model for precise click grounding, with CPU/Apple Silicon deployment planned; its announcement still labels weights/code as coming soon. This is distinct from Jev's text-choice role. These public sources do not establish the exact $19/$20 "10×" offer described by the user.
 
 Primary sources checked October 10, 2026: [BrowserOS Neo](https://browseros.com/), [BrowserVLM](https://www.browseros.com/blog/browservlm/), [TypeSafe models and customization](https://docs.typesafe.ai/models).
 
 A local model may save screenshot tokens and network latency if it replaces an expensive planner step. Model loading, inference, memory pressure and extra recovery can make it slower if added as another mandatory call. Ollama/LM Studio are already alternative decision-provider adapters; their real performance on this Mac has not been benchmarked. Do not bundle weights or promise a speed increase before a matched test.
+
+The local vision branch has a controlled canvas fixture check with Qwen3-VL 2B Instruct and Ollama on this Mac. Retina-aware capture reduced the same fixture's model prompt count from 4,034 to 1,180, with 27 output tokens in each case. The first smaller-frame point inference took 0.678 s after model loading; repeating it for a click took 0.139 s with caching. End-to-end calls took 0.762 s and 0.295 s and returned 553/559 bytes with no image. The larger-frame cold/model-switch run took 18.699 s. These are narrow capability measurements, not main-agent quota savings or typical task latency. The non-Instruct model exhausted an 80-token output budget in reasoning and returned no point; that failed run sent no click. The default is therefore the explicit Instruct model with bounded output.
 
 ## Next acceptance gates
 

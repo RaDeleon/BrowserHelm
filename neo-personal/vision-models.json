@@ -1,0 +1,23 @@
+[
+  {
+    "id": "qwen/qwen3.8-flash",
+    "name": "Qwen3.8 Flash",
+    "purpose": "First choice to try · economical screen understanding",
+    "detail": "A cost-conscious candidate for visual understanding and desktop interaction. Test click accuracy on your pages before making it your default.",
+    "url": "https://openrouter.ai/qwen/qwen3.8-flash"
+  },
+  {
+    "id": "google/gemini-3.8-flash",
+    "name": "Gemini3.8 Flash",
+    "purpose": "Complex screens · visual reasoning",
+    "detail": "A candidate for more demanding visual reasoning and agent tasks. Compare completed tasks and total latency against the cheaper options.",
+    "url": "https://openrouter.ai/google/gemini-3.8-flash"
+  },
+  {
+    "id": "deepseek/deepseek-v4.1-flash",
+    "name": "DeepSeek V4.1 Flash",
+    "purpose": "Alternative · efficient multimodal agent model",
+    "detail": "Native image understanding for computer-use agents. Uses the current V4.1 model rather than the earlier experimental vision checkpoint.",
+    "url": "https://openrouter.ai/deepseek/deepseek-v4.1-flash"
+  }
+]

@@ -13,6 +13,7 @@ neo-personal/installation.json
 /neo-token-measurements.json
 /neo-payload-benchmark.js
 neo-personal/*.json
+!neo-personal/vision-models.json
 neo-personal/live_smoke.py
 neo-personal/verify_install.py
 __pycache__/

@@ -36,6 +36,18 @@ struct MemoryView: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    GroupBox("Visual learning") {
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack(spacing: 30) {
+                                metric("Visual attempts", memory.visualAttempts ?? 0)
+                                metric("Text verified", memory.visualVerified ?? 0)
+                                metric("Local model calls avoided", memory.visualCallsAvoided ?? 0)
+                                metric("Verified reuse", memory.visualReuseVerified ?? 0)
+                            }
+                            Text("After two model runs with text verification, the identical task and fresh screenshot can reuse a point for up to 7 days. Target pixels and page layout are checked before every click. Failed verification revokes reuse. These counts measure local calls, not Claude tokens. Models are not retrained.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
+                    }
                     HStack {
                         Button("Test connection") { store.test("--test-memory") }.disabled(store.busy)
                         Button("Sync pending") { store.test("--sync-memory") }.disabled(store.busy || !store.config.memory.enabled)
@@ -57,7 +69,7 @@ struct MemoryView: View {
                         }
                     }
                 }
-                Text("OpenViking stores scoped experiences and supplies advisory hints; the gateway applies the learning policy. Local cache hits avoid a memory-service round trip. Hints stay within 1.6 KB. No retraining, extra reflection model or automatic replay of browser writes. Navigation outcomes and direct-request failure/recovery lessons sync with vector-only processing. Local direct-request fingerprints use HMAC; arguments and raw errors are never saved in experience memory. Disable memory in Settings to stop capture, reuse, recall and uploads.").font(.callout).foregroundStyle(.secondary)
+                Text("OpenViking stores scoped experiences; the gateway applies the learning policy. Navigation hints stay within 1.6 KB. Visual outcomes sync without screenshots, URLs, instructions or coordinates. Coordinate evidence stays on this Mac; remote records cannot authorize clicks. Reuse requires an explicit new click request and current state checks. No weight retraining or reflection model. Disable memory in Settings to stop capture, reuse, recall and uploads.").font(.callout).foregroundStyle(.secondary)
             }.padding(24)
         }
     }
