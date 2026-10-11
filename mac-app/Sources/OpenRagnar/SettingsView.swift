@@ -1,8 +1,13 @@
 import SwiftUI
 struct SettingsView: View {
     @ObservedObject var store: Store
+    @AppStorage("openragnar.appearance") private var appearance = "system"
     var body: some View {
         Form {
+            Section("Appearance") {
+                Picker("Theme", selection: $appearance) { Text("System").tag("system"); Text("Light").tag("light"); Text("Dark").tag("dark") }
+                Text("Bronze and stone tones. System follows your Mac's appearance.").font(.caption).foregroundStyle(.secondary)
+            }
             Section("Decision provider") {
                 Picker("Provider", selection: $store.config.provider) { ForEach(providers, id: \.self) { Text(names[$0]!).tag($0) } }
                     .onChange(of: store.config.provider) { _, _ in store.refreshKey() }
@@ -28,9 +33,9 @@ struct SettingsView: View {
                 Text("The result budget is a byte estimate, not provider billing. The full tool catalog is enabled by default. Complete omitted output stays available locally. BrowserOS Neo must remain running.").font(.caption).foregroundStyle(.secondary)
             }
             Section("OpenViking memory") {
-                Toggle("Learn from delegated navigation outcomes", isOn: $store.config.memory.enabled)
+                Toggle("Learn from navigation and request outcomes", isOn: $store.config.memory.enabled)
                 Text("Uses your existing ~/.openviking/ovcli.conf connection and credential. Keys stay in that private file. OpenRagnar reads and writes only its own browser experience collection.").font(.caption).foregroundStyle(.secondary)
-                Text("Recalls at most two past routes, with a 1.6 KB hint budget. Saves goals, public routes and verified outcomes; excludes page bodies, screenshots and form contents. Memory provides advice, not automatic approval or model training.").font(.caption).foregroundStyle(.secondary)
+                Text("Recalls bounded routes and failure lessons. Two local text-verified runs can skip a provider choice, with fresh link and text checks. Direct requests retain metadata-only outcomes and private fingerprints; repeated failures return guidance. No browser write replay or model training.").font(.caption).foregroundStyle(.secondary)
                 HStack {
                     Button("Test OpenViking") { store.test("--test-memory") }
                     Button("Sync pending outcomes") { store.test("--sync-memory") }.disabled(!store.config.memory.enabled)

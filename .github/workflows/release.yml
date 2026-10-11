@@ -1,0 +1,123 @@
+name: Release DMG
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to build (for example v0.4.3)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  PYTHONDONTWRITEBYTECODE: '1'
+
+jobs:
+  regressions:
+    name: Release tests / Python ${{ matrix.python }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.9', '3.12']
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Validate version and run tests
+        run: |
+          python script/release_metadata.py "$RELEASE_TAG"
+          python -m unittest discover -s neo-personal -p 'test_*.py'
+          python -m unittest discover -s script -p 'test_*.py'
+
+  build:
+    name: Build and verify Apple Silicon DMG
+    needs: regressions
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          persist-credentials: false
+      - name: Require Apple Silicon and matching version
+        run: |
+          test "$(uname -m)" = arm64
+          python3 script/release_metadata.py "$RELEASE_TAG"
+      - name: Download pinned relocatable Python runtime
+        env:
+          RUNTIME_URL: https://github.com/astral-sh/python-build-standalone/releases/download/20261009/cpython-3.12.15%2B20261009-aarch64-apple-darwin-install_only.tar.gz
+          RUNTIME_SHA256: 83dcb04777c798bd95f3687acf9ae84b09860272ee6bdfb05be8bcf9447f75b8
+        run: |
+          mkdir -p .runtime
+          curl --fail --location --retry 3 "$RUNTIME_URL" -o "$RUNNER_TEMP/python-runtime.tar.gz"
+          printf '%s  %s\n' "$RUNTIME_SHA256" "$RUNNER_TEMP/python-runtime.tar.gz" | shasum -a 256 -c -
+          tar -xzf "$RUNNER_TEMP/python-runtime.tar.gz" -C .runtime
+          .runtime/python/bin/python3.12 -I -B -c 'import ssl, sqlite3; assert ssl.OPENSSL_VERSION'
+      - name: Compile, stage and package
+        env:
+          OPENRAGNAR_SIGNING_IDENTITY: '-'
+        run: |
+          (cd mac-app && swift build -c release --disable-sandbox)
+          python3 script/stage_app.py
+          python3 script/package_dmg.py
+      - name: Verify mounted DMG and packaged version
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          python3 script/verify_dmg.py "dist/OpenRagnar-$VERSION-arm64.dmg"
+          (cd dist && shasum -a 256 -c "OpenRagnar-$VERSION-arm64.dmg.sha256")
+          dist/OpenRagnar.app/Contents/Resources/runtime/bin/python3.12 -I -B -c 'import urllib.request; assert urllib.request.urlopen("https://docs.typesafe.ai", timeout=20).status == 200'
+          cp "docs/release-notes/$VERSION.md" dist/RELEASE-NOTES.md
+          git rev-parse HEAD > dist/SOURCE-COMMIT.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-dmg
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            dist/*.dmg
+            dist/*.dmg.sha256
+            dist/*.verification.json
+            dist/RELEASE-NOTES.md
+            dist/SOURCE-COMMIT.txt
+
+  publish:
+    name: Publish verified prerelease assets
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: release-dmg
+          path: dist
+      - name: Upload assets before publishing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          (cd dist && sha256sum -c "OpenRagnar-$VERSION-arm64.dmg.sha256")
+          if gh release view "$RELEASE_TAG" --json isDraft > "$RUNNER_TEMP/release.json" 2>/dev/null; then
+            python3 -c 'import json,sys; assert json.load(open(sys.argv[1]))["isDraft"], "Release is already published; use a new version tag"' "$RUNNER_TEMP/release.json"
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --draft --prerelease --title "OpenRagnar $VERSION (preview)" --notes-file dist/RELEASE-NOTES.md
+          fi
+          gh release upload "$RELEASE_TAG" "dist/OpenRagnar-$VERSION-arm64.dmg" "dist/OpenRagnar-$VERSION-arm64.dmg.sha256" "dist/OpenRagnar-$VERSION-arm64.verification.json" dist/SOURCE-COMMIT.txt --clobber
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease --latest=false

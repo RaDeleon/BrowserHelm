@@ -1,124 +1,6 @@
 import SwiftUI
 import AppKit
 
-struct MetricCard: View {
-    var title: String; var value: String; var note: String; var symbol: String
-    var tint: Color = .cyan
-    var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            Label(title, systemImage: symbol).font(.callout).foregroundStyle(.secondary)
-            Text(value).font(.system(size: 28, weight: .semibold, design: .rounded)).foregroundStyle(tint).textSelection(.enabled)
-            Text(note).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(18)
-            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 14))
-    }
-}
-struct StatsBar: View {
-    var data: Dashboard
-    var body: some View {
-        let t = data.totals
-        HStack(spacing: 12) {
-            MetricCard(title: "Tokens used · est.", value: "~" + number(estimate(t.inputBytes + t.clientText)), note: "Text token equivalents used", symbol: "text.alignleft")
-            MetricCard(title: "Tokens saved · est.", value: "~" + number(estimate(t.netTextSaved)), note: savingsNote(t), symbol: "arrow.down.right", tint: t.netTextSaved >= 0 ? .green : .orange)
-            MetricCard(title: "Browser calls", value: number(t.upstreamCalls), note: "From \(number(t.toolRequests)) agent requests", symbol: "cursorarrow.click")
-            MetricCard(title: "Decision provider", value: number(t.providerTokens), note: t.providerUnknown > 0 ? "Reported tokens; \(t.providerUnknown) calls lack totals" : "Provider-reported tokens · \(t.providerCalls) calls", symbol: "cpu", tint: .purple)
-        }
-    }
-}
-func savingsNote(_ counters: Counters) -> String {
-    let baseline = counters.upstreamInputBytes + counters.upstreamText
-    guard baseline > 0 else { return "Awaiting forwarded replies" }
-    let ratio = abs(Double(counters.netTextSaved) / Double(baseline) * 100)
-    return String(format: "%.1f%% %@ text · same calls", ratio, counters.netTextSaved >= 0 ? "less" : "more")
-}
-struct DashboardView: View {
-    @ObservedObject var store: Store
-    @State private var period = 0
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                Text("See what your agent actually sends").font(.title2.bold())
-                Text("Live counters across your MCP clients. BrowserOS Neo supplies browser execution; OpenRagnar keeps the agent's results smaller.").foregroundStyle(.secondary)
-                if let d = store.dashboard {
-                    let t = d.totals
-                    GroupBox {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack { Text("Same browser calls, compact and raw context").font(.headline); Spacer(); Text("ESTIMATE").font(.caption.monospaced()).foregroundStyle(.secondary) }
-                            comparison("OpenRagnar → agent", value: "~" + number(estimate(t.inputBytes+t.clientText)), note: "Recorded request text + compacted reply text")
-                            comparison("Raw Neo browser-call equivalent", value: "~" + number(estimate(t.upstreamInputBytes+t.upstreamText)), note: "Original forwarded call text + replies; modeled, not a separate task run")
-                            comparison("Net savings from OpenRagnar", value: "~" + number(estimate(t.netTextSaved)), note: "Includes catalog and instructions; artifact reads and local replies reduce savings")
-                            Divider()
-                            Text("Estimates use text UTF-8 bytes ÷ 3. They exclude image/audio billing, hidden reasoning, repeated conversation history and Claude's quota weighting. Decision-provider tokens are shown separately above.")
-                                .font(.caption).foregroundStyle(.secondary)
-                            if t.mediaCount > 0 { Text("\(t.mediaCount) image/audio blocks passed through. Their billed tokens are unknown.").font(.caption).foregroundStyle(.secondary) }
-                        }.padding(10)
-                    }
-                    HStack(alignment: .top, spacing: 18) {
-                        GroupBox {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("BrowserOS Neo's own savings").font(.headline)
-                                Picker("Window", selection: $period) { Text("All time").tag(0); Text("30 days").tag(1); Text("7 days").tag(2) }.pickerStyle(.segmented)
-                                if let stats = d.neo.stats, stats.hasMeasuredStats {
-                                    let w = period == 0 ? stats.allTime : period == 1 ? stats.last30Days : stats.last7Days
-                                    comparison("Neo tokens used", value: "~"+number(w.browserClawTokenEstimate), note: "Neo's estimate")
-                                    comparison("Neo tokens saved", value: "~"+number(w.rawTokenSavingsEstimate), note: "Versus Neo's screenshot-first model")
-                                    Text("\(number(w.sessionCount)) sessions · \(number(w.toolCallCount)) dispatches").font(.caption).foregroundStyle(.secondary)
-                                    Text("All Neo traffic, including OpenRagnar. This is not an independent Claude-alone run, and these savings are not added to OpenRagnar's savings.").font(.caption).foregroundStyle(.secondary)
-                                } else { Text(d.neo.error ?? "Neo has no measured history yet.").foregroundStyle(.secondary) }
-                            }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        GroupBox {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Claude alone · matched trials").font(.headline)
-                                let matched = d.benchmarks.filter { $0.claudeTokens != nil && $0.gatewayTokens != nil }
-                                if !matched.isEmpty {
-                                    comparison("Claude alone", value: number(matched.reduce(0){$0+($1.claudeTokens ?? 0)}), note: "User-entered totals for \(matched.count) matched trials")
-                                    comparison("Claude with OpenRagnar", value: number(matched.reduce(0){$0+($1.gatewayTokens ?? 0)}), note: "User-entered end-to-end totals")
-                                    comparison("Tokens saved", value: number(matched.reduce(0){$0+($1.claudeTokens ?? 0)-($1.gatewayTokens ?? 0)}), note: "Can be negative; actual entered totals")
-                                } else { Text("Needs a matched benchmark").font(.title3.weight(.medium)); Text("MCP does not report Claude's billed usage. In Sessions, enter token totals from the same task run with Claude alone, Neo alone and OpenRagnar.").foregroundStyle(.secondary) }
-                                let neoTrials = d.benchmarks.filter { $0.neoTokens != nil && $0.gatewayTokens != nil }
-                                if !neoTrials.isEmpty {
-                                    Divider()
-                                    comparison("Neo directly", value: number(neoTrials.reduce(0){$0+($1.neoTokens ?? 0)}), note: "User-entered totals for \(neoTrials.count) matched trials")
-                                    comparison("OpenRagnar savings vs Neo", value: number(neoTrials.reduce(0){$0+($1.neoTokens ?? 0)-($1.gatewayTokens ?? 0)}), note: "Same matched trials; can be negative")
-                                }
-                                Button("Open sessions") { store.selectedTab = 2 }
-                            }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-                    GroupBox {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Neo without OpenRagnar · recent session history").font(.headline)
-                            let direct = (d.neo.sessions ?? []).filter { !$0.viaGateway }
-                            if d.neo.available {
-                            HStack {
-                                Label("\(direct.count) sessions", systemImage: "globe")
-                                Spacer()
-                                Text("~\(number(direct.compactMap(\.tokens).reduce(0,+))) tokens used · \(number(direct.reduce(0){$0+$1.moves})) moves")
-                            }
-                            Text("Reported Neo estimates for sessions not identified as OpenRagnar in the latest 100 records. \(d.neo.hasMore == true ? "Older sessions exist." : "") Direct-session savings need matched baselines; Neo's aggregate savings above cover all traffic.").font(.caption).foregroundStyle(.secondary)
-                            if direct.contains(where: { $0.tokens == nil }) { Text("Some sessions lack token counters; the total includes only reported estimates.").font(.caption).foregroundStyle(.secondary) }
-                            } else { Text(d.neo.error ?? "Neo history unavailable.").foregroundStyle(.secondary) }
-                        }.padding(10)
-                    }
-                    HStack {
-                        Label("Full Neo read/write tools", systemImage: "checkmark.shield")
-                        Spacer()
-                        Button("Check browser") { store.test("--test-browser") }.disabled(store.busy)
-                    }
-                    Text("Gateway statistics retain 90 days. The session list shows the latest 100 sessions and 1,000 requests. API keys, tool code and page contents are not stored in the metrics database.").font(.caption).foregroundStyle(.secondary)
-                } else { ProgressView("Loading local counters…") }
-            }.padding(24)
-        }
-    }
-    func comparison(_ label: String, value: String, note: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack { Text(label); Spacer(); Text(value).font(.system(.body, design: .monospaced).weight(.semibold)).textSelection(.enabled) }
-            Text(note).font(.caption).foregroundStyle(.secondary)
-        }
-    }
-}
-
 struct ConnectorsView: View {
     @ObservedObject var store: Store
     var body: some View {
@@ -138,7 +20,7 @@ struct ConnectorsView: View {
                 }
                 GroupBox {
                     HStack(spacing: 20) {
-                        Image(systemName: "globe").font(.largeTitle).foregroundStyle(.cyan)
+                        Image(systemName: "globe").font(.largeTitle).foregroundStyle(RagnarTheme.bronze)
                         VStack(alignment: .leading, spacing: 6) {
                             Text("BrowserOS Neo").font(.headline)
                             Text(store.config.upstream).font(.caption.monospaced()).textSelection(.enabled)
@@ -214,12 +96,16 @@ struct SessionsView: View {
     @ObservedObject var store: Store
     @State private var selected = ""
     @State private var source = 0
+    @State private var problemsOnly = false
+    @State private var selectedRequest: String?
+    @State private var choseInitialSession = false
     @State private var benchmarkSession: GatewaySession?
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Sessions & requests").font(.title2.bold())
                 Spacer()
+                if source == 0 { Toggle("Problems only", isOn: $problemsOnly).toggleStyle(.checkbox) }
                 Picker("Source", selection: $source) { Text("OpenRagnar").tag(0); Text("Neo history").tag(1) }.pickerStyle(.segmented).frame(width: 280)
             }
             if let d = store.dashboard {
@@ -238,8 +124,8 @@ struct SessionsView: View {
                                 Text("Matched trial totals entered by you: Claude alone \(b.claudeTokens.map(number) ?? "—") · Neo alone \(b.neoTokens.map(number) ?? "—") · Claude + OpenRagnar \(b.gatewayTokens.map(number) ?? "—") tokens").font(.caption).foregroundStyle(.secondary)
                             }
                         }
-                        let rows = d.requests.filter { selected.isEmpty || $0.sessionId == selected }
-                        Table(rows) {
+                        let rows = d.requests.filter { (selected.isEmpty || $0.sessionId == selected) && (!problemsOnly || $0.status != "ok") }
+                        Table(rows, selection: $selectedRequest) {
                             TableColumn("Request") { r in VStack(alignment: .leading, spacing: 3) { Text(r.tool.isEmpty ? r.method : r.tool).font(.system(.body, design: .monospaced)); Text(timestamp(r.started)).font(.caption).foregroundStyle(.secondary) } }.width(min: 170, ideal: 220)
                             TableColumn("Context est.") { r in Text("~"+number(estimate(r.inputBytes+r.clientText))) }.width(min: 90, ideal: 110)
                             TableColumn("Saved est.") { r in Text("~"+number(estimate(r.upstreamInputBytes+r.upstreamText-r.inputBytes-r.clientText))).foregroundStyle(r.upstreamInputBytes+r.upstreamText >= r.inputBytes+r.clientText ? .green : .orange) }.width(min: 80, ideal: 100)
@@ -247,6 +133,13 @@ struct SessionsView: View {
                             TableColumn("Provider") { r in Text(r.providerUnknown > 0 ? "\(r.providerTokens)+?" : number(r.providerTokens)) }.width(min: 65, ideal: 80)
                             TableColumn("Seconds") { r in Text(String(format: "%.2f", max(0,r.finished-r.started))) }.width(min: 60, ideal: 75)
                             TableColumn("Status") { r in Text(r.status).foregroundStyle(r.status == "ok" ? Color.secondary : Color.orange) }.width(min: 50, ideal: 65)
+                        }
+                        HStack {
+                            Text(selected.isEmpty ? "Showing all recent sessions" : "Showing selected session").font(.caption).foregroundStyle(.secondary)
+                            Spacer()
+                            Button("View request diagnostics", systemImage: "stethoscope") {
+                                store.diagnosticQuery = selectedRequest ?? ""; store.selectedTab = 5
+                            }.disabled(selectedRequest == nil)
                         }
                         Text("Calls are measured upstream MCP calls. ≈ moves are Neo's actual dispatch records matched by time, including internal SDK steps. Overlapping requests or missing records show —. The newest \(rows.count) retained requests are shown; text estimates exclude images and Claude billing.").font(.caption).foregroundStyle(.secondary)
                     }
@@ -263,6 +156,12 @@ struct SessionsView: View {
                 }
             } else { ProgressView("Loading sessions…"); Spacer() }
         }.padding(24).sheet(item: $benchmarkSession) { BenchmarkView(store: store, session: $0) }
+            .onAppear { chooseInitialSession() }
+            .onChange(of: store.dashboard?.sessions.first?.id) { chooseInitialSession() }
+    }
+    private func chooseInitialSession() {
+        guard !choseInitialSession, let latest = store.dashboard?.sessions.first(where: { $0.toolRequests > 0 }) else { return }
+        selected = latest.id; choseInitialSession = true
     }
 }
 struct BenchmarkView: View {
@@ -289,55 +188,5 @@ struct BenchmarkView: View {
                 claude = b.claudeTokens.map(String.init) ?? ""; neo = b.neoTokens.map(String.init) ?? ""; gateway = b.gatewayTokens.map(String.init) ?? ""
             }
         }
-    }
-}
-struct MainView: View {
-    @ObservedObject var store: Store
-    var body: some View {
-        HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 22) {
-                Label("OpenRagnar", systemImage: "bolt.shield.fill").font(.title3.bold()).foregroundStyle(.cyan)
-                VStack(spacing: 6) {
-                    page("Dashboard", icon: "chart.bar.xaxis", tag: 0)
-                    page("Connectors", icon: "point.3.connected.trianglepath.dotted", tag: 1)
-                    page("Sessions", icon: "clock.arrow.circlepath", tag: 2)
-                    page("Memory", icon: "brain", tag: 4)
-                    page("Settings", icon: "gearshape", tag: 3)
-                }
-                Spacer()
-                Text("NEO EXECUTION\nOPENRAGNAR CONTEXT").font(.caption2.monospaced()).foregroundStyle(.secondary)
-                Text("Personal build 0.4.0").font(.caption).foregroundStyle(.secondary)
-            }.padding(20).frame(width: 195).frame(maxHeight: .infinity).background(.quaternary.opacity(0.4))
-            Divider()
-            VStack(spacing: 0) {
-                HStack {
-                    Text(["Overview", "Connections", "Activity", "Configuration", "Experience memory"][store.selectedTab]).font(.headline)
-                    Spacer()
-                    if let d = store.dashboard { Text("Updated \(Date(timeIntervalSince1970:d.updatedAt).formatted(date:.omitted,time:.shortened))").font(.caption).foregroundStyle(.secondary) }
-                    Button { store.refreshDashboard() } label: { Image(systemName: "arrow.clockwise") }.help("Refresh local statistics").disabled(store.loadingDashboard)
-                }.padding(20)
-                Divider()
-                if let d = store.dashboard { StatsBar(data: d).padding(20) }
-                switch store.selectedTab {
-                case 1: ConnectorsView(store: store)
-                case 2: SessionsView(store: store)
-                case 3: SettingsView(store: store)
-                case 4: MemoryView(store: store)
-                default: DashboardView(store: store)
-                }
-                Divider()
-                HStack(alignment: .top) {
-                    Image(systemName: store.dashboardError.isEmpty ? "info.circle" : "exclamationmark.triangle")
-                    Text(store.dashboardError.isEmpty ? store.status : store.dashboardError).font(.caption).textSelection(.enabled).lineLimit(4)
-                    Spacer()
-                }.foregroundStyle(.secondary).padding(14)
-            }.frame(maxWidth: .infinity, maxHeight: .infinity)
-        }.frame(minWidth: 1120, minHeight: 740)
-    }
-    func page(_ title: String, icon: String, tag: Int) -> some View {
-        Button { store.selectedTab = tag } label: {
-            Label(title, systemImage: icon).frame(maxWidth: .infinity, alignment: .leading).padding(10)
-                .background(store.selectedTab == tag ? Color.cyan.opacity(0.13) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
-        }.buttonStyle(.plain)
     }
 }

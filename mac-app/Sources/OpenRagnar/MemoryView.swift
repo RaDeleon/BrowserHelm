@@ -5,7 +5,7 @@ struct MemoryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 Text("Browser experience memory").font(.title2.bold())
-                Text("Jev and other decision providers use small past outcomes to inform their next choice. Every selected link is checked against the current page, and success is verified by finding your requested text.").foregroundStyle(.secondary)
+                Text("Learn from outcomes, then verify again. Delegated navigation recalls relevant routes and failure lessons. After two local successes on the same task, a current observed link can bypass a provider decision. Direct tools remember request failures; they cannot infer whether the whole task succeeded.").foregroundStyle(.secondary)
                 if let memory = store.dashboard?.memory {
                     GroupBox {
                         VStack(alignment: .leading, spacing: 8) {
@@ -18,6 +18,22 @@ struct MemoryView: View {
                                 metric("Tasks with recalled hints", memory.tasksWithRecall)
                             }.padding(.vertical, 8)
                             Text("Uploaded means OpenViking accepted the file. Semantic indexing may finish later. Counts cover this Mac's retained records; service and embedding token costs are not reported here.").font(.caption).foregroundStyle(.secondary)
+                        }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    GroupBox("Learning in use") {
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack(spacing: 30) {
+                                metric("Tasks using a proven route", memory.tasksWithReuse ?? 0)
+                                metric("Provider calls avoided", memory.providerCallsAvoided ?? 0)
+                                metric("Reused tasks with text verified", memory.reusedTasksVerified ?? 0)
+                            }
+                            HStack(spacing: 30) {
+                                metric("Retained direct requests", memory.toolRequestsSeen ?? 0)
+                                metric("Retained failed requests", memory.toolFailures ?? 0)
+                                metric("Repeat failure hints shown", memory.repeatFailureHints ?? 0)
+                            }
+                            Text("Last recall: \(memory.recallSource ?? "Not used"). Calls avoided count skipped decision requests, not measured tokens or speed. Reuse requires matching intent and two local text-verified runs in 30 days; a later failed route removes eligibility until two new successes.")
+                                .font(.caption).foregroundStyle(.secondary)
                         }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
                     }
                     HStack {
@@ -35,15 +51,20 @@ struct MemoryView: View {
                                     Text(timestamp(experience.created)).font(.caption).foregroundStyle(.secondary)
                                 }
                                 Spacer()
-                                Text(experience.verified ? "Text verified" : "Escalated").foregroundStyle(experience.verified ? .green : .orange)
+                                Text(outcome(experience)).foregroundStyle(experience.verified ? .green : .orange)
                                 Text(experience.synced ? "Uploaded" : "Queued").font(.caption).foregroundStyle(.secondary)
                             }.padding(8)
                         }
                     }
                 }
-                Text("No self-training or extra reflection calls. Hints are limited to two routes and 1.6 KB per decision. Experience uploads use vector-only processing. Outcomes queue privately when the service is offline and retry while a new MCP session is running. Disable memory in Settings to stop new recall and uploads; retained records remain available.").font(.callout).foregroundStyle(.secondary)
+                Text("OpenViking stores scoped experiences and supplies advisory hints; the gateway applies the learning policy. Local cache hits avoid a memory-service round trip. Hints stay within 1.6 KB. No retraining, extra reflection model or automatic replay of browser writes. Navigation outcomes and direct-request failure/recovery lessons sync with vector-only processing. Local direct-request fingerprints use HMAC; arguments and raw errors are never saved in experience memory. Disable memory in Settings to stop capture, reuse, recall and uploads.").font(.callout).foregroundStyle(.secondary)
             }.padding(24)
         }
+    }
+    private func outcome(_ experience: MemoryExperience) -> String {
+        if experience.test == true { return "Validation record" }
+        if experience.kind == "tool_outcome" { return experience.status == "error" ? "Request failed" : "Request accepted" }
+        return experience.verified ? "Text verified" : "Escalated"
     }
     private func metric(_ label: String, _ value: Int) -> some View {
         VStack(alignment: .leading) { Text(number(value)).font(.title2.monospacedDigit()); Text(label).font(.caption).foregroundStyle(.secondary) }
