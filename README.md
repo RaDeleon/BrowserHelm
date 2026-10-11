@@ -4,7 +4,7 @@
 
 OpenRagnar connects an MCP client such as Claude Desktop or Codex to a separately running [BrowserOS Neo](https://github.com/browseros-ai/BrowserOS) instance. Neo executes browser actions. OpenRagnar controls how much browser context comes back and can delegate bounded navigation to Jev or another configured model.
 
-Version **0.4.4** targets Apple Silicon Macs running macOS 14+. This is an experimental portfolio project. Preview DMGs are ad-hoc signed, not notarized. Neo is required and is not bundled.
+Version **0.4.6** targets Apple Silicon Macs running macOS 14+. This is an experimental portfolio project. Preview DMGs are ad-hoc signed, not notarized. Neo is required and is not bundled.
 
 Download the DMG from [GitHub Releases](https://github.com/RaDeleon/OpenRagnar/releases). While this repository is private, downloads require repository access. Each release includes a SHA-256 checksum and a packaging verification report. Version tags trigger a tested Apple Silicon build and attach the DMG automatically.
 
@@ -13,6 +13,22 @@ Download the DMG from [GitHub Releases](https://github.com/RaDeleon/OpenRagnar/r
 Browser agents can repeatedly send large tool catalogs, page snapshots and duplicate results to the main model. OpenRagnar explores reducing that overhead while preserving access to complete browser output and making the execution path observable.
 
 The engineering work includes MCP negotiation, context compaction and recovery, provider adapters, locally verified navigation, durable memory uploads, concurrent telemetry, macOS Keychain integration and app packaging. Payload reductions are measurable; Claude subscription savings still require matched task benchmarks.
+
+## Performance target
+
+**The target is 10× faster verified task completion than the same Claude/Codex client using BrowserOS Neo directly, without a proportional increase in cost.** The cost objective is equal or lower total cost per successful task. A 10× speedup at 10× the cost does not meet the product goal. This is a development target; current tests have not demonstrated that end-to-end advantage.
+
+| Measure | Acceptance criterion |
+| --- | --- |
+| Speed | Baseline elapsed time divided by OpenRagnar elapsed time is at least 10 for the declared benchmark workload. Measure from task submission through independently verified completion. |
+| Quality | Maintain or improve completion accuracy. Retain failures, recovery time and escalation; faster unsuccessful attempts are not completed tasks. |
+| Cost | Compare total cost per successful task, including main-agent usage, decision and vision calls, and memory embedding/storage. Aim for equal or lower cost; disclose any increase separately from speed. Missing costs remain unknown. |
+| Subscription efficiency | Track client-reported tokens and planner turns separately from API cost estimates. Lower usage can preserve allowance; it does not automatically lower a fixed subscription bill or establish a quota-savings percentage. |
+| Learning | Report first-run and learned-repeat results separately, plus performance when the page changes. Improvement comes from verified procedure reuse and relevant failure lessons; model weights are not trained, and every new run is not guaranteed to improve. |
+
+Use matched tasks, the same main-agent model and comparable browser state and tool exposure. Publish the task set, settings, sample size, success rate, median/tail latency and cost assumptions with any performance claim. Compare Neo directly with OpenRagnar local and cloud paths, with and without learning; follow the [benchmark procedure](docs/benchmarks.md). Small fixture timings, compacted bytes and individual calls avoided establish mechanisms, not the 10× target.
+
+The development priority is fewer expensive planner round trips: bounded multi-step execution, deterministic browser evidence, verified experience reuse and compact results. Use Jev or vision when the task needs it, and justify cloud calls by measured total-task benefit. Local vision is the default starting path; users can explicitly select OpenRouter. Both paths must meet the same correctness and measurement requirements.
 
 ## Capabilities
 
@@ -69,7 +85,7 @@ Download an `aarch64-apple-darwin` Python 3.12 `install_only` archive from the o
 open dist/OpenRagnar.app
 ```
 
-This creates `dist/OpenRagnar-0.4.4-arm64.dmg`. Install the app in Applications before configuring clients. **Connectors → Connect Claude Desktop** backs up and merges a separate `openragnar` entry, preserving other servers. Reconnect the client after changes; old processes retain their loaded engine.
+This creates `dist/OpenRagnar-0.4.6-arm64.dmg`. Install the app in Applications before configuring clients. **Connectors → Connect Claude Desktop** backs up and merges a separate `openragnar` entry, preserving other servers. Reconnect the client after changes; old processes retain their loaded engine.
 
 Local builds are ad-hoc signed. The [release guide](docs/releases.md) covers isolated test builds, Developer ID signing, notarization and the feature → staging → main workflow. Public signing remains unverified pending Apple Developer enrollment; setting up these scripts does not make an existing DMG notarized.
 
