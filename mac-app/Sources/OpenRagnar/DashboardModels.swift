@@ -42,6 +42,7 @@ struct NeoSnapshot: Decodable {
     var available: Bool; var stats: NeoStats?; var sessions: [NeoSession]?; var hasMore: Bool?; var error: String?
 }
 struct Dashboard: Decodable {
+    var diagnostics: DiagnosticsSnapshot?
     var memory: MemorySnapshot?
     var totals: Counters; var sessions: [GatewaySession]; var requests: [GatewayRequest]
     var benchmarks: [Benchmark]; var connectors: [ClientConnector]; var neo: NeoSnapshot
@@ -49,11 +50,14 @@ struct Dashboard: Decodable {
 }
 struct MemoryExperience: Decodable, Identifiable {
     var id: String; var goal: String; var verified: Bool; var created: Double; var synced: Bool
+    var kind: String?; var status: String?; var failureCategory: String?; var test: Bool?
 }
 struct MemorySnapshot: Decodable {
     var enabled: Bool; var endpoint: String; var collection: String; var connection: String
     var saved: Int; var pending: Int; var tasksWithRecall: Int; var lastRecalled: Int
     var recent: [MemoryExperience]
+    var tasksWithReuse: Int?; var reusedSteps: Int?; var reusedTasksVerified: Int?; var providerCallsAvoided: Int?
+    var repeatFailureHints: Int?; var toolRequestsSeen: Int?; var toolFailures: Int?; var recallSource: String?
 }
 func number(_ value: Int) -> String { value.formatted(.number) }
 func estimate(_ bytes: Int) -> Int { Int((Double(bytes) / 3).rounded()) }

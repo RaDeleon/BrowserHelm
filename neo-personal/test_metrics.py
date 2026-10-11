@@ -39,6 +39,18 @@ class MetricsTests(unittest.TestCase):
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool: list(pool.map(record,range(48)))
         d=self.m.snapshot(); self.assertEqual(d['totals']['tool_requests'],48)
         self.assertEqual(d['totals']['provider_tokens'],48*14)
+    def test_snapshot_reader_does_not_block_request_recording(self):
+        reader = self.m.db()
+        try:
+            reader.execute('BEGIN')
+            self.assertEqual(reader.execute('SELECT COUNT(*) FROM requests').fetchone()[0], 0)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                pool.submit(self.m.record, self.row()).result(timeout=2)
+            self.assertEqual(reader.execute('SELECT COUNT(*) FROM requests').fetchone()[0], 0)
+        finally:
+            reader.rollback()
+            reader.close()
+        self.assertEqual(self.m.snapshot()['totals']['tool_requests'], 1)
     def test_local_reads_and_catalog_overhead_reduce_savings(self):
         self.m.record(self.row())
         row=self.row(); row.update(tool='neo_read_output',input_bytes=120,upstream_input_bytes=0,upstream_bytes=0,upstream_text=0,client_text=1000,upstream_calls=0,provider_calls=0,provider_tokens=0)

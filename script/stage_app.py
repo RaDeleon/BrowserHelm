@@ -6,8 +6,12 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from release_support import sign, signing_identity, macho_files
+from release_metadata import build_metadata
 root = pathlib.Path(__file__).resolve().parent.parent
-destination = root / 'dist/OpenRagnar.app'
+version = build_metadata()
+identity = signing_identity(os.environ.get('OPENRAGNAR_SIGNING_IDENTITY', '-'))
+destination = pathlib.Path(os.environ.get('OPENRAGNAR_APP_OUTPUT', str(root / 'dist/OpenRagnar.app'))).expanduser().resolve()
 work = pathlib.Path(tempfile.mkdtemp(prefix='openragnar-stage-', dir='/private/tmp'))
 app = work / 'OpenRagnar.app'
 contents = app / 'Contents'
@@ -30,24 +34,28 @@ shutil.copytree(runtime_source / 'lib/python3.12', runtime / 'lib/python3.12', i
 # Python-build-standalone's executable and extension modules are relocatable.
 # Keep its license and compiled dependency license notices from LICENSE.txt.
 engine = resources / 'engine'; engine.mkdir()
-for name in ['gateway.py', 'decision.py', 'openragnar.py', 'launch.py', 'metrics.py', 'experience.py']:
+for name in ['gateway.py', 'decision.py', 'openragnar.py', 'launch.py', 'metrics.py', 'experience.py', 'diagnostics.py', 'version.py']:
     shutil.copy2(root / 'neo-personal' / name, engine / name)
 shutil.copy2(root / 'README-OpenRagnar.md', resources / 'README.md')
 for name in ('LICENSE', 'NOTICE'):
     shutil.copy2(root / name, resources / name)
-plist = dict(CFBundleExecutable='OpenRagnar', CFBundleIdentifier='com.techinsf.openragnar', CFBundleName='OpenRagnar', CFBundleDisplayName='OpenRagnar', CFBundlePackageType='APPL', CFBundleShortVersionString='0.4.0', CFBundleVersion='5', LSMinimumSystemVersion='14.0', NSPrincipalClass='NSApplication', NSHighResolutionCapable=True)
+plist = dict(CFBundleExecutable='OpenRagnar', CFBundleIdentifier='com.techinsf.openragnar', CFBundleName='OpenRagnar', CFBundleDisplayName='OpenRagnar', CFBundlePackageType='APPL', CFBundleShortVersionString=version['VERSION'], CFBundleVersion=version['BUILD'], LSMinimumSystemVersion='14.0', NSPrincipalClass='NSApplication', NSHighResolutionCapable=True)
 with (contents / 'Info.plist').open('wb') as file: plistlib.dump(plist, file)
 subprocess.run(['/usr/bin/xattr', '-cr', str(app)], check=True)
-# Sign each bundled Mach-O before the outer app. Ad-hoc signing, local test only.
-for path in runtime.rglob('*'):
-    if path.is_file() and path.suffix in ('.so', '.dylib'):
-        subprocess.run(['/usr/bin/codesign', '--force', '--sign', '-', str(path)], check=True, capture_output=True)
-subprocess.run(['/usr/bin/codesign', '--force', '--sign', '-', str(runtime / 'bin/python3.12')], check=True)
-subprocess.run(['/usr/bin/codesign', '--force', '--sign', '-', str(app)], check=True)
-destination.parent.mkdir(exist_ok=True)
+# Sign bundled executables/libraries before the app. Public builds use the same
+# Developer ID identity, Hardened Runtime and secure timestamps throughout.
+for path in macho_files(runtime):
+    sign(path, identity, executable=True)
+sign(app, identity, executable=True)
+subprocess.run(['/usr/bin/codesign', '--verify', '--deep', '--strict', str(app)], check=True)
+destination.parent.mkdir(parents=True, exist_ok=True)
 if destination.exists(): shutil.rmtree(destination)
 subprocess.run(['/usr/bin/ditto', '--norsrc', '--noextattr', str(app), str(destination)], check=True)
 subprocess.run(['/usr/bin/xattr', '-d', 'com.apple.FinderInfo', str(destination)], capture_output=True)
-subprocess.run(['/usr/bin/codesign', '--verify', '--deep', '--strict', str(destination)], check=True)
+# Verify a clean copy of the destination: synced folders can immediately add
+# FinderInfo to a bundle, although its signed contents are unchanged.
+verification = work / 'verification/OpenRagnar.app'
+subprocess.run(['/usr/bin/ditto', '--norsrc', '--noextattr', str(destination), str(verification)], check=True)
+subprocess.run(['/usr/bin/codesign', '--verify', '--deep', '--strict', str(verification)], check=True)
 shutil.rmtree(work)
 print(destination)
