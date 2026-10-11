@@ -48,7 +48,7 @@ struct SettingsView: View {
                 Text("The result budget is a byte estimate, not provider billing. The full tool catalog is enabled by default. Complete omitted output stays available locally. BrowserOS Neo must remain running.").font(.caption).foregroundStyle(.secondary)
             }
             Section("OpenViking memory") {
-                Toggle("Learn from navigation and request outcomes", isOn: $store.config.memory.enabled)
+                Toggle("Learn from navigation, vision and request outcomes", isOn: $store.config.memory.enabled)
                 Text("Uses your existing ~/.openviking/ovcli.conf connection and credential. Keys stay in that private file. OpenRagnar reads and writes only its own browser experience collection.").font(.caption).foregroundStyle(.secondary)
                 Text("Recalls bounded routes and failure lessons. Two local text-verified runs can skip a provider choice, with fresh link and text checks. Direct requests retain metadata-only outcomes and private fingerprints; repeated failures return guidance. No browser write replay or model training.").font(.caption).foregroundStyle(.secondary)
                 HStack {

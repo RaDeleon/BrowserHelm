@@ -58,6 +58,7 @@ struct MemorySnapshot: Decodable {
     var recent: [MemoryExperience]
     var tasksWithReuse: Int?; var reusedSteps: Int?; var reusedTasksVerified: Int?; var providerCallsAvoided: Int?
     var repeatFailureHints: Int?; var toolRequestsSeen: Int?; var toolFailures: Int?; var recallSource: String?
+    var visualAttempts: Int?; var visualVerified: Int?; var visualCallsAvoided: Int?; var visualReuseVerified: Int?
 }
 func number(_ value: Int) -> String { value.formatted(.number) }
 func estimate(_ bytes: Int) -> Int { Int((Double(bytes) / 3).rounded()) }

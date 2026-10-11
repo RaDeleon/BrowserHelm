@@ -1,14 +1,22 @@
 <!doctype html>
 <html lang="en"><meta charset="utf-8"><title>OpenRagnar local vision test</title>
-<style>body{margin:0;background:#edf0f4;font:24px system-ui;color:#172532}main{width:800px;margin:80px auto}canvas{display:block;width:800px;height:360px;background:white;border-radius:20px}p{font-size:18px}#outcome{font-weight:600}</style>
+<style>body{margin:0;background:#edf0f4;font:24px system-ui;color:#172532;-webkit-font-smoothing:antialiased}main{width:800px;margin:80px auto}canvas{display:block;width:800px;height:360px;background:white;border-radius:20px}p{font-size:18px}#outcome{font-weight:600}</style>
 <main><h1>Local vision test</h1><p>Click the green tile containing a triangle. This test changes only this page.</p>
 <canvas width="800" height="360" id="tiles"></canvas><p id="outcome">Waiting for a selection</p></main>
 <script>
 const c=document.querySelector('canvas'),ctx=c.getContext('2d');
-for(const [x,color] of [[60,'#4262ae'],[310,'#258060'],[560,'#ac6440']]){ctx.fillStyle=color;ctx.fillRect(x,80,180,180);}
+let greenX=310;
+window.failVerification=false;
+window.drawTiles=(nextGreenX=310)=>{
+greenX=nextGreenX;const brownX=greenX===310?560:310;ctx.clearRect(0,0,800,360);
+for(const [x,color] of [[60,'#4262ae'],[greenX,'#258060'],[brownX,'#ac6440']]){ctx.fillStyle=color;ctx.fillRect(x,80,180,180);}
 ctx.fillStyle='white';ctx.beginPath();ctx.arc(150,170,45,0,2*Math.PI);ctx.fill();
-ctx.beginPath();ctx.moveTo(400,120);ctx.lineTo(450,210);ctx.lineTo(350,210);ctx.closePath();ctx.fill();
-ctx.fillRect(620,140,60,60);
+ctx.beginPath();ctx.moveTo(greenX+90,120);ctx.lineTo(greenX+140,210);ctx.lineTo(greenX+40,210);ctx.closePath();ctx.fill();
+ctx.fillRect(brownX+60,140,60,60);
+};window.drawTiles();
 c.addEventListener('click',e=>{const r=c.getBoundingClientRect(),x=(e.clientX-r.left)*800/r.width,y=(e.clientY-r.top)*360/r.height;
-document.querySelector('#outcome').textContent=x>=310&&x<=490&&y>=80&&y<=260?'Vision test complete':'Incorrect tile selected';});
+if(window.failVerification){document.querySelector('#outcome').textContent='Controlled verification failure';return;}
+const brownX=greenX===310?560:310;
+document.querySelector('#outcome').textContent=y<80||y>260?'Incorrect tile selected':
+x>=greenX&&x<=greenX+180?'Vision test complete':x>=60&&x<=240?'Circle selected':x>=brownX&&x<=brownX+180?'Square selected':'Incorrect tile selected';});
 </script></html>

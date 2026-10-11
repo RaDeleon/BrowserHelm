@@ -76,6 +76,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 class ExperienceMemory:
     def __init__(self, settings, path, config_path=None):
         self.initial_enabled = settings.get('enabled', False) is True
+        self.validation = settings.get('validation', False) is True
         self.path = pathlib.Path(path)
         self.settings_path = self.path.parent/'settings.json'
         self.config_path = pathlib.Path(config_path or pathlib.Path.home()/'.openviking/ovcli.conf')
@@ -93,6 +94,10 @@ class ExperienceMemory:
                 id TEXT PRIMARY KEY, destination TEXT, tool TEXT, signature TEXT,
                 created REAL, status TEXT, category TEXT);
               CREATE INDEX IF NOT EXISTS tool_history_match ON tool_history(destination,signature,created);
+                CREATE TABLE IF NOT EXISTS visual_history (
+                  id TEXT PRIMARY KEY, destination TEXT, task TEXT, scene TEXT,
+                  created REAL, status TEXT, point TEXT, source TEXT);
+                CREATE INDEX IF NOT EXISTS visual_history_match ON visual_history(destination,task,scene,created);
             ''')
             db.execute('INSERT OR IGNORE INTO memory_state VALUES (?,?)', ('request_hmac_key', os.urandom(32).hex()))
         self.path.chmod(0o600)
@@ -171,8 +176,8 @@ class ExperienceMemory:
 
     def local_documents(self):
         with self.db() as db:
-            rows = db.execute('SELECT document FROM experiences WHERE destination=? AND document NOT LIKE ? ORDER BY created DESC LIMIT 200',
-                              (self.destination(), '%"kind": "tool_outcome"%')).fetchall()
+            rows = db.execute('SELECT document FROM experiences WHERE destination=? AND document NOT LIKE ? AND document NOT LIKE ? ORDER BY created DESC LIMIT 200',
+                              (self.destination(), '%"kind": "tool_outcome"%', '%"kind": "visual_outcome"%')).fetchall()
         documents = []
         for row in rows:
             try: documents.append(json.loads(row[0]))
@@ -224,6 +229,47 @@ class ExperienceMemory:
             key = bytes.fromhex(db.execute("SELECT value FROM memory_state WHERE key='request_hmac_key'").fetchone()[0])
         payload = json.dumps([tool, arguments], sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()
         return hmac.new(key, payload, hashlib.sha256).hexdigest()
+
+    def visual_evidence(self, task, scene):
+        """Only this installation's observations count; remote memories cannot authorize coordinates."""
+        if not self.enabled: return {'support': 0, 'failures': 0, 'point': None}
+        with self.db() as db:
+            rows = db.execute("SELECT status,point,source FROM visual_history WHERE destination=? AND task=? AND scene=? AND created>? AND (source='model' OR status<>'text_verified') ORDER BY created DESC,rowid DESC LIMIT 25",
+                              (self.destination(), task, scene, time.time()-7*86400)).fetchall()
+        support, failures, point = 0, 0, None
+        for status, raw, source in rows:
+            if status != 'text_verified':
+                if not support: failures += 1
+                else: break
+                continue
+            if failures: break
+            if source == 'model':
+                support += 1
+                if point is None: point = json.loads(raw)
+        return {'support': support, 'failures': failures, 'point': point if support >= 2 else None}
+
+    def capture_visual(self, task, scene, point, report):
+        if not self.enabled: return 'not saved'
+        identifier, now = str(uuid.uuid4()), time.time()
+        source = report['groundingSource']
+        with self.db() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('DELETE FROM visual_history WHERE created<?', (now-7*86400,))
+            db.execute('INSERT INTO visual_history VALUES (?,?,?,?,?,?,?,?)',
+                       (identifier, self.destination(), task, scene, now, report['status'], json.dumps(point), source))
+            db.execute('DELETE FROM visual_history WHERE id IN (SELECT id FROM visual_history ORDER BY created DESC LIMIT -1 OFFSET 2000)')
+        reused = source == 'verified_local_memory'
+        self.increment({'visual_attempts': 1, 'visual_verified': int(report['verified']),
+                        'visual_calls_avoided': int(reused), 'visual_reuse_verified': int(reused and report['verified'])})
+        # Upload lessons/outcomes only. Screenshots, URL, instruction, postcondition,
+        # coordinates and scene fingerprint remain private to this installation.
+        document = {'schema': 3, 'source': 'openragnar', 'kind': 'visual_outcome', 'id': identifier, 'created': now,
+                    'goal': 'Visual target '+report['status'], 'verified': report['verified'], 'status': report['status'],
+                    'verification': 'successText absent before click; presence afterward only if verified=true',
+                    'groundingSource': source, 'taskKey': task, 'test': self.validation,
+                    'lesson': 'Use only the identical fresh screen and matching task; revoke reuse after failed verification.',
+                    'model': clean(point.get('model', ''), 100)}
+        return self.enqueue(document)
 
     def prior_tool_failure(self, tool, arguments):
         if not self.enabled: return None
@@ -391,6 +437,8 @@ class ExperienceMemory:
               'tasks_with_reuse':int(state.get('tasks_with_reuse',0)), 'reused_steps':int(state.get('reused_steps',0)),
               'reused_tasks_verified':int(state.get('reused_tasks_verified',0)), 'provider_calls_avoided':int(state.get('provider_calls_avoided',0)),
               'repeat_failure_hints':int(state.get('repeat_failure_hints',0)), 'tool_requests_seen':requests, 'tool_failures':failures,
+              'visual_attempts':int(state.get('visual_attempts',0)), 'visual_verified':int(state.get('visual_verified',0)),
+              'visual_calls_avoided':int(state.get('visual_calls_avoided',0)), 'visual_reuse_verified':int(state.get('visual_reuse_verified',0)),
               'recall_source':state.get('recall_source','Not used'),
             'recent':[{'id':json.loads(r[0])['id'], 'goal':json.loads(r[0])['goal'],
                   'kind':json.loads(r[0]).get('kind','navigation'), 'failure_category':json.loads(r[0]).get('failureCategory') or json.loads(r[0]).get('category'),
