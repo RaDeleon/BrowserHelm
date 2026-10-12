@@ -1,77 +1,77 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1260" viewBox="0 0 1600 1260" role="img" aria-labelledby="title desc">
 <title id="title">02  Jev-assisted public navigation</title><desc id="desc">One Claude tool call can contain several observed-link decisions and browser steps.. Includes savings mechanisms, verification and optional OpenViking memory.</desc>
-<rect width="1600" height="1260" fill="#171b20"/>
-<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10" fill="#d7ad77"/></marker><marker id="return" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10" fill="#8cbde4"/></marker></defs>
-<text x="64" y="52" fill="#d7ad77" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="600">OPENRAGNAR / BROWSER EXECUTION</text>
-<text x="64" y="111" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="43" font-weight="600">02  Jev-assisted public navigation</text>
+<rect width="1600" height="1260" fill="#0b121a"/>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10" fill="#57d7ed"/></marker><marker id="return" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10" fill="#8cbde4"/></marker></defs>
+<text x="64" y="52" fill="#57d7ed" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="600">BROWSERHELM / BROWSER EXECUTION</text>
+<text x="64" y="111" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="43" font-weight="600">02  Jev-assisted public navigation</text>
 <text x="64" y="155" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="400">One Claude tool call can contain several observed-link decisions and browser steps.</text>
-<text x="64" y="196" fill="#91c8a0" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400">IMPLEMENTED / openragnar_navigate / PUBLIC SAME-ORIGIN LINKS ONLY</text>
-<rect x="64" y="250" width="290" height="130" rx="14" fill="#222830" stroke="#39424c"/>
-<rect x="82" y="269" width="4" height="25" rx="2" fill="#d7ad77"/>
-<text x="98" y="290" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Claude</text>
+<text x="64" y="196" fill="#91c8a0" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400">IMPLEMENTED / browserhelm_navigate / PUBLIC SAME-ORIGIN LINKS ONLY</text>
+<rect x="64" y="250" width="290" height="130" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="82" y="269" width="4" height="25" rx="2" fill="#57d7ed"/>
+<text x="98" y="290" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Claude</text>
 <text x="86" y="326" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Goal + start URL + successText</text>
 <text x="86" y="353" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">maxSteps: default 4, cap 6</text>
-<rect x="480" y="250" width="350" height="130" rx="14" fill="#222830" stroke="#39424c"/>
-<rect x="498" y="269" width="4" height="25" rx="2" fill="#d7ad77"/>
-<text x="514" y="290" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">OpenRagnar</text>
+<rect x="480" y="250" width="350" height="130" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="498" y="269" width="4" height="25" rx="2" fill="#57d7ed"/>
+<text x="514" y="290" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">BrowserHelm</text>
 <text x="502" y="326" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Observe → decide → recheck</text>
 <text x="502" y="353" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Navigate → verify → repeat</text>
-<rect x="970" y="250" width="300" height="130" rx="14" fill="#222830" stroke="#39424c"/>
-<rect x="988" y="269" width="4" height="25" rx="2" fill="#d7ad77"/>
-<text x="1004" y="290" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">BrowserOS Neo</text>
+<rect x="970" y="250" width="300" height="130" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="988" y="269" width="4" height="25" rx="2" fill="#57d7ed"/>
+<text x="1004" y="290" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">BrowserOS Neo</text>
 <text x="992" y="326" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Observe page + visible links</text>
 <text x="992" y="353" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Execute checked navigation</text>
-<rect x="1404" y="250" width="132" height="130" rx="14" fill="#222830" stroke="#39424c"/>
-<rect x="1422" y="269" width="4" height="25" rx="2" fill="#d7ad77"/>
-<text x="1438" y="290" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Page</text>
+<rect x="1404" y="250" width="132" height="130" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="1422" y="269" width="4" height="25" rx="2" fill="#57d7ed"/>
+<text x="1438" y="290" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Page</text>
 <text x="1426" y="326" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Live site</text>
-<path d="M366 312L466 312" fill="none" stroke="#d7ad77" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M366 312L466 312" fill="none" stroke="#57d7ed" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="375" y="287" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400">1 call</text>
-<path d="M844 312L956 312" fill="none" stroke="#d7ad77" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M844 312L956 312" fill="none" stroke="#57d7ed" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="853" y="287" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400">browser</text>
-<path d="M1284 312L1390 312" fill="none" stroke="#d7ad77" stroke-width="2" marker-end="url(#arrow)"/>
-<rect x="480" y="470" width="350" height="130" rx="14" fill="#222830" stroke="#39424c"/>
+<path d="M1284 312L1390 312" fill="none" stroke="#57d7ed" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="480" y="470" width="350" height="130" rx="14" fill="#141f2b" stroke="#39424c"/>
 <rect x="498" y="489" width="4" height="25" rx="2" fill="#8cbde4"/>
-<text x="514" y="510" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Jev / decision model</text>
+<text x="514" y="510" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Jev / decision model</text>
 <text x="502" y="546" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Observed options → choice</text>
 <text x="502" y="573" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Probability + usage returned</text>
-<path d="M575 395L575 453" fill="none" stroke="#d7ad77" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M575 395L575 453" fill="none" stroke="#57d7ed" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="595" y="431" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400">goal + options</text>
 <path d="M760 455L760 395" fill="none" stroke="#8cbde4" stroke-width="2" marker-end="url(#return)"/>
 <path d="M1120 390V635H910V390" fill="none" stroke="#8cbde4" stroke-width="2" marker-end="url(#return)"/>
 <text x="936" y="623" fill="#8cbde4" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400">Page evidence</text>
 <path d="M450 390V635H210V390" fill="none" stroke="#8cbde4" stroke-width="2" marker-end="url(#return)"/>
 <text x="236" y="623" fill="#8cbde4" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400">Result → Claude</text>
-<rect x="64" y="686" width="1472" height="116" rx="14" fill="#222830" stroke="#39424c"/>
+<rect x="64" y="686" width="1472" height="116" rx="14" fill="#141f2b" stroke="#39424c"/>
 <rect x="82" y="705" width="4" height="25" rx="2" fill="#91c8a0"/>
-<text x="98" y="726" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">SAVING INSIDE THE LOOP: avoid intermediate Claude planning turns</text>
-<text x="86" y="762" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Jev chooses among current links; OpenRagnar executes and verifies. Jev never controls Neo directly.</text>
+<text x="98" y="726" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">SAVING INSIDE THE LOOP: avoid intermediate Claude planning turns</text>
+<text x="86" y="762" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Jev chooses among current links; BrowserHelm executes and verifies. Jev never controls Neo directly.</text>
 <text x="86" y="789" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Bounded inputs reduce decision context. Eligible local routes skip Jev and advisory recall.</text>
-<rect x="64" y="836" width="1472" height="116" rx="14" fill="#222830" stroke="#39424c"/>
+<rect x="64" y="836" width="1472" height="116" rx="14" fill="#141f2b" stroke="#39424c"/>
 <rect x="82" y="855" width="4" height="25" rx="2" fill="#8cbde4"/>
-<text x="98" y="876" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">MEASURED MECHANISM: 5 → 4 Neo calls for a one-link task in 0.4.7</text>
+<text x="98" y="876" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">MEASURED MECHANISM: 5 → 4 Neo calls for a one-link task in 0.4.7</text>
 <text x="86" y="912" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">One recheck + navigation request replaces two. A separate final observation remains.</text>
 <text x="86" y="939" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Versus 0.4.6: ~6.4% lower median in 6 runs/version with deterministic selection; not a Claude benchmark.</text>
-<text x="64" y="994" fill="#d7ad77" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="600">OPTIONAL MEMORY / NOT A BROWSER-ACTION HOP</text>
-<rect x="64" y="1016" width="435" height="150" rx="14" fill="#222830" stroke="#39424c"/>
+<text x="64" y="994" fill="#57d7ed" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="600">OPTIONAL MEMORY / NOT A BROWSER-ACTION HOP</text>
+<rect x="64" y="1016" width="435" height="150" rx="14" fill="#141f2b" stroke="#39424c"/>
 <rect x="82" y="1035" width="4" height="25" rx="2" fill="#91c8a0"/>
-<text x="98" y="1056" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Local evidence + outbox</text>
+<text x="98" y="1056" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Local evidence + outbox</text>
 <text x="86" y="1092" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">2 local text-verified successes</text>
 <text x="86" y="1119" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">30-day task / route matching</text>
 <text x="86" y="1146" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Failure revokes reuse eligibility</text>
-<path d="M515 1074L605 1074" fill="none" stroke="#d7ad77" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M515 1074L605 1074" fill="none" stroke="#57d7ed" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="517" y="1057" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400">upload</text>
 <path d="M605 1122L515 1122" fill="none" stroke="#8cbde4" stroke-width="2" marker-end="url(#return)"/>
 <text x="518" y="1148" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400">hints</text>
-<rect x="625" y="1016" width="390" height="150" rx="14" fill="#222830" stroke="#39424c"/>
-<rect x="643" y="1035" width="4" height="25" rx="2" fill="#d7ad77"/>
-<text x="659" y="1056" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">OpenViking</text>
+<rect x="625" y="1016" width="390" height="150" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="643" y="1035" width="4" height="25" rx="2" fill="#57d7ed"/>
+<text x="659" y="1056" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">OpenViking</text>
 <text x="647" y="1092" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Scoped outcomes + failure lessons</text>
 <text x="647" y="1119" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Navigation hints in path 2</text>
 <text x="647" y="1146" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Vector-only upload processing</text>
-<rect x="1040" y="1016" width="496" height="150" rx="14" fill="#222830" stroke="#39424c"/>
+<rect x="1040" y="1016" width="496" height="150" rx="14" fill="#141f2b" stroke="#39424c"/>
 <rect x="1058" y="1035" width="4" height="25" rx="2" fill="#91c8a0"/>
-<text x="1074" y="1056" fill="#f3eee6" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Memory savings</text>
+<text x="1074" y="1056" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Memory savings</text>
 <text x="1062" y="1092" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Local cache avoids remote retrieval</text>
 <text x="1062" y="1119" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Proven reuse can skip inference</text>
 <text x="1062" y="1146" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Live checks still required; costs apply</text>

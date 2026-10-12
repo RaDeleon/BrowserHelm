@@ -1,5 +1,11 @@
 import Foundation
 import SwiftUI
+// Preserve explicit appearance choices while defaulting new installations to Packet Studio dark.
+let defaults = UserDefaults.standard
+if defaults.object(forKey: "browserhelm.appearance") == nil,
+   let old = UserDefaults(suiteName: "com.techinsf.openragnar")?.string(forKey: "openragnar.appearance") {
+    defaults.set(old, forKey: "browserhelm.appearance")
+}
 if CommandLine.arguments.contains("--provider-key") {
     // Internal IPC only: stdout is captured by the engine, never logged or sent to MCP clients.
     do {
@@ -19,11 +25,11 @@ if CommandLine.arguments.contains("--provider-key") {
         let interrupt = DispatchSource.makeSignalSource(signal: SIGINT, queue: .global())
         interrupt.setEventHandler { if process.isRunning { process.terminate() } }; interrupt.resume()
         try process.run(); process.waitUntilExit(); exit(process.terminationStatus)
-    } catch { fputs("OpenRagnar: \(error.localizedDescription)\n", stderr); exit(1) }
-} else if CommandLine.arguments.contains("--connect-codex") {
-    do { print(try Runner.test("--connect-codex", extra: [Bundle.main.executableURL!.path])) } catch { fputs("\(error.localizedDescription)\n", stderr); exit(1) }
+    } catch { fputs("BrowserHelm: \(error.localizedDescription)\n", stderr); exit(1) }
+} else if let mode = CommandLine.arguments.first(where: { ["--connect-codex", "--connect-claude", "--disconnect-codex", "--disconnect-claude"].contains($0) }) {
+    do { print(try Runner.test(mode, extra: [Bundle.main.executableURL!.path])) } catch { fputs("\(error.localizedDescription)\n", stderr); exit(1) }
 } else if let index = CommandLine.arguments.firstIndex(of: "--task"), CommandLine.arguments.count > index + 1 {
     do { print(try Runner.test("--task", extra: [CommandLine.arguments[index+1]])) } catch { fputs("\(error.localizedDescription)\n", stderr); exit(1) }
 } else if let mode = CommandLine.arguments.first(where: { ["--test-browser", "--test-provider", "--test-vision", "--dashboard", "--diagnostics", "--test-memory", "--sync-memory"].contains($0) }) {
     do { print(try Runner.test(mode)) } catch { fputs("\(error.localizedDescription)\n", stderr); exit(1) }
-} else { OpenRagnarApp.main() }
+} else { BrowserHelmApp.main() }

@@ -72,7 +72,7 @@ struct TasksView: View {
         store.taskCommand(["action":"finish","task_id":task.id,"status":status,"verification":verification])
     }
     private func export() {
-        let panel = NSSavePanel(); panel.nameFieldStringValue = "OpenRagnar-tasks.json"
+        let panel = NSSavePanel(); panel.nameFieldStringValue = "BrowserHelm-tasks.json"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         // Full metadata-only export comes from the engine, not a UI subset.
         do { let raw = try Runner.test("--dashboard"); let data = Data(raw.utf8)

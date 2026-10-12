@@ -124,7 +124,7 @@ class ExperienceMemory:
             raise ValueError('Invalid OpenViking endpoint')
         if p.scheme != 'https' and not (p.scheme == 'http' and p.hostname in ('localhost','127.0.0.1','::1')):
             raise ValueError('OpenViking requires HTTPS or a local endpoint')
-        headers = {'Content-Type': 'application/json', 'User-Agent': 'openragnar/0.4.2'}
+        headers = {'Content-Type': 'application/json', 'User-Agent': 'browserhelm/0.5.0'}
         if c.get('api_key'):
             headers['Authorization'] = 'Bearer ' + c['api_key']
         # Match the installed plugin: identity headers only in trusted mode.
@@ -287,7 +287,7 @@ class ExperienceMemory:
                 'scope': 'identical tool arguments; MCP request outcome only'}
 
     def capture_tool(self, tool, arguments, row, hint_shown=False):
-        if not self.enabled or tool.startswith('openragnar_'): return
+        if not self.enabled or tool.startswith(('openragnar_', 'browserhelm_')): return
         from diagnostics import issue
         category = issue((row.get('diagnostic') or {}).get('category', 'ok'))['category']
         identifier = row['id']

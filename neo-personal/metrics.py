@@ -189,7 +189,7 @@ class NeoReader:
         items = []
         for raw in history.get('items',[]):
             h=digest(raw.get('sessionId',''))
-            via=h in gateway_hashes or 'openragnar' in str(raw.get('slug','')).lower()
+            via=h in gateway_hashes or any(n in str(raw.get('slug','')).lower() for n in ('browserhelm', 'openragnar'))
             tokens=raw.get('tokenUsage',{}) or {}
             items.append({'id':h,'client':str(raw.get('label','Neo client'))[:80],
                           'label':str(raw.get('name','Browser session'))[:120], 'viaGateway':via,
@@ -241,10 +241,10 @@ def connectors(snapshot):
                 entries=data.get('mcp_servers',{})
             else:
                 entries=json.loads(path.read_text()).get('mcpServers',{})
-            others=sorted(str(k)[:80] for k in entries if k != 'openragnar')
-            entry=entries.get('openragnar',{})
+            others=sorted(str(k)[:80] for k in entries if k not in ('browserhelm', 'openragnar'))
+            entry=entries.get('browserhelm', entries.get('openragnar', {}))
             command=str(entry.get('command',''))
-            configured=command.endswith('/OpenRagnar.app/Contents/MacOS/OpenRagnar') and '--mcp' in entry.get('args',[]) and entry.get('enabled') is not False
+            configured=command.endswith(('/BrowserHelm.app/Contents/MacOS/BrowserHelm', '/OpenRagnar.app/Contents/MacOS/OpenRagnar')) and '--mcp' in entry.get('args',[]) and entry.get('enabled') is not False
         except (OSError, ValueError, ImportError, TypeError, AttributeError):
             pass
         patterns={'Claude Desktop':['claude-desktop','claude desktop','claude-ai'], 'Claude Code':['claude-code','claude code'], 'Codex':['codex']}

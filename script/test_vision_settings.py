@@ -46,11 +46,11 @@ let reenabled = try Configuration.decode(JSONEncoder().encode(configuration))
 precondition(reenabled.delegationEnabled && !reenabled.agentTaskMarkers)
 print("settings checks passed")
 '''
-        with tempfile.TemporaryDirectory(prefix='openragnar-settings-') as directory:
+        with tempfile.TemporaryDirectory(prefix='browserhelm-settings-') as directory:
             folder = pathlib.Path(directory)
             main = folder / 'main.swift'; main.write_text(probe)
             binary = folder / 'check'
-            subprocess.run(['swiftc', str(root / 'mac-app/Sources/OpenRagnar/Configuration.swift'), str(main), '-o', str(binary)], check=True, capture_output=True, timeout=60)
+            subprocess.run(['swiftc', str(root / 'mac-app/Sources/BrowserHelm/Configuration.swift'), str(main), '-o', str(binary)], check=True, capture_output=True, timeout=60)
             result = subprocess.run([str(binary)], check=True, capture_output=True, text=True, timeout=10)
             self.assertEqual(result.stdout.strip(), 'settings checks passed')
 

@@ -27,7 +27,7 @@ STEP_REQUIRED = {'inspect': [], 'extract': ['fields'], 'navigate': ['text'],
 STEP = {'oneOf': [{'type': 'object', 'properties': {'action': {'type': 'string', 'enum': [action]}, **properties},
                    'required': ['action', *STEP_REQUIRED[action]], 'additionalProperties': False}
                   for action, properties in STEP_VARIANTS.items()]}
-EXEC_HELP = """openragnar_execute runs a bounded read-only plan. Supply exactly one of page or public HTTPS startUrl.
+EXEC_HELP = """browserhelm_execute runs a bounded read-only plan. Supply exactly one of page or public HTTPS startUrl.
 Each step has action-specific parameters: inspect optionally includeStyles; extract requires fields;
 navigate requires text (a literal phrase expected on the destination) and optionally maxHops=1–3;
 scroll requires nonzero pixels; locate alone accepts instruction and proposes a point, never clicks.
@@ -39,7 +39,7 @@ Missing selectors or phrases have null values. Completion verifies only supplied
 not the entire user goal or optional fields. Read partial results on escalation before recovery.
 No forms, clicks, downloads, arbitrary JavaScript or automatic retries. Direct tools handle unsupported work.
 """
-EXEC_TOOL = {'name': 'openragnar_execute', 'description':
+EXEC_TOOL = {'name': 'browserhelm_execute', 'description':
     'Delegate a bounded read-only browser plan in one call. Runs inspection, guarded selector extraction, '
     'inspect has no instruction; navigate requires literal destination text; locate alone uses instruction. '
     'same-origin public link navigation using the configured decision provider, viewport scrolling and '
@@ -187,7 +187,7 @@ def read_page(gateway, page, jobs, checks, needle=''):
 
 
 def execute(gateway, arguments, request_id):
-    from openragnar import public_url, NAV_READY_JS
+    from browserhelm import public_url, NAV_READY_JS
     from vision import visual_act
     args = validate(arguments)
     start = origin = None

@@ -46,7 +46,7 @@ def client_name(value):
     if 'codex' in text: return 'Codex'
     if 'claude-code' in text or 'claude code' in text: return 'Claude Code'
     if 'claude' in text or 'local-agent-mode' in text: return 'Claude Desktop'
-    if 'openragnar' in text: return 'OpenRagnar check'
+    if 'browserhelm' in text or 'openragnar' in text: return 'BrowserHelm check'
     return 'Other MCP client'
 
 
@@ -59,7 +59,7 @@ def display_path(path):
 @functools.lru_cache(maxsize=1)
 def build_identity():
     engine = pathlib.Path(__file__).resolve().parent
-    launcher = engine.parent.parent / 'MacOS/OpenRagnar'
+    launcher = engine.parent.parent / 'MacOS/BrowserHelm'
     bundle = engine.parent.parent / 'Info.plist'
     version = 'source'
     digest = hashlib.sha256()
@@ -173,7 +173,7 @@ class Diagnostics:
                      **normalized, duration=max(0, row.get('finished', 0) - row.get('started', 0)),
                      upstream_calls=row.get('upstream_calls', 0), input_bytes=row.get('input_bytes', 0), client_bytes=row.get('client_bytes', 0))
         # Safe stderr remains useful if SQLite is unavailable. No user error string is printed.
-        print('OpenRagnar diagnostic ' + json.dumps(event, separators=(',', ':')), file=sys.stderr, flush=True)
+        print('BrowserHelm diagnostic ' + json.dumps(event, separators=(',', ':')), file=sys.stderr, flush=True)
         with self.db() as db:
             columns = list(event)
             db.execute('INSERT INTO events('+','.join(columns)+') VALUES('+','.join('?' for _ in columns)+')', [event[k] for k in columns])
@@ -217,7 +217,7 @@ def claude_errors(path):
         lines = file.read(256*1024).decode('utf-8', errors='replace').splitlines()
     result = []
     for line in lines:
-        stamp = re.match(r'^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d+Z) \[openragnar\]', line)
+        stamp = re.match(r'^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d+Z) \[(?:browserhelm|openragnar)\]', line)
         if not stamp: continue
         match = re.search(r'Message from server: .*?error\(code=(-?\d+)\)', line)
         mismatch = '[error]' in line and 'MCP-Protocol-Version' in line and 'does not match' in line
@@ -237,7 +237,7 @@ def runtime_processes(connections, configured_launcher, command_runner=subproces
     tracked = {c['launcher_pid']: c for c in connections if c['active']}
     result = []
     for line in command.stdout.splitlines():
-        match = re.fullmatch(r'\s*(\d+) (/.+/OpenRagnar\.app/Contents/MacOS/OpenRagnar) --mcp\s*', line)
+        match = re.fullmatch(r'\s*(\d+) (/.+/(?:BrowserHelm\.app/Contents/MacOS/BrowserHelm|OpenRagnar\.app/Contents/MacOS/OpenRagnar)) --mcp\s*', line)
         if not match or not pathlib.Path(match[2]).is_file(): continue
         pid, path = int(match[1]), display_path(match[2])
         connection = tracked.get(pid)
@@ -265,14 +265,15 @@ def diagnostic_snapshot(path, metrics_path=None, log_path=None, include_processe
         try: events += historical_failures(pathlib.Path(metrics_path).resolve(), known)
         except (sqlite3.Error, OSError): warnings.append('Older request counters could not be read.')
     try:
-        events += claude_errors(pathlib.Path(log_path) if log_path else pathlib.Path.home()/'Library/Logs/Claude/mcp-server-openragnar.log')
+        events += claude_errors(pathlib.Path(log_path) if log_path else pathlib.Path.home()/'Library/Logs/Claude/mcp-server-browserhelm.log')
+        if not log_path: events += claude_errors(pathlib.Path.home()/'Library/Logs/Claude/mcp-server-openragnar.log')
     except (OSError, ValueError): warnings.append('Claude MCP log could not be read.')
     events = sorted(events, key=lambda e:e['created'], reverse=True)[:DISPLAY_LIMIT]
     configured = None
     try:
         config = json.loads((pathlib.Path.home()/'Library/Application Support/Claude/claude_desktop_config.json').read_text())
-        command = config.get('mcpServers', {}).get('openragnar', {}).get('command', '')
-        if isinstance(command, str) and command.endswith('/OpenRagnar.app/Contents/MacOS/OpenRagnar'): configured = display_path(command)
+        command = config.get('mcpServers', {}).get('browserhelm', {}).get('command', '')
+        if isinstance(command, str) and command.endswith('/BrowserHelm.app/Contents/MacOS/BrowserHelm'): configured = display_path(command)
     except (OSError, ValueError, AttributeError): pass
     processes = []
     if include_processes:

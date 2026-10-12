@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from decision import DecisionProvider, validate_endpoint
-from openragnar import OpenRagnarGateway, public_url
+from browserhelm import BrowserHelmGateway, public_url
 
 class ProviderTests(unittest.TestCase):
     def test_jev_wire_and_chosen_probability(self):
@@ -48,7 +48,7 @@ class ProviderTests(unittest.TestCase):
 class NavigationTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.g = OpenRagnarGateway({'provider':'ollama','providers':{'ollama':{'endpoint':'http://localhost:11434/v1','model':'test'}}}, self.temp.name)
+        self.g = BrowserHelmGateway({'provider':'ollama','providers':{'ollama':{'endpoint':'http://localhost:11434/v1','model':'test'}}}, self.temp.name)
         self.args = {'startUrl':'https://example.com','goal':'Find docs','successText':'target phrase','maxSteps':2}
         self.state = {'url':'https://example.com/','title':'Example','found':False,'links':[{'url':'https://example.com/docs','label':'Docs'}, {'url':'https://evil.example/','label':'Leave site'}, {'url':'https://example.com/logout','label':'Log out'}]}
         self.decision = {'choice':'L0','probability':.9,'evidence':'test','usage':{'input_tokens':20},'latencySeconds':.1,'model':'test'}
@@ -136,10 +136,10 @@ class NavigationTests(unittest.TestCase):
         request={'method':'tools/list'}
         reply={'result':{'tools':[{'name':n,'description':'d','inputSchema':{'type':'object'}} for n in ['run','snapshot','act','name_session']]}}
         result=self.g.transform(request,reply)['result']
-        self.assertEqual(set(t['name'] for t in result['tools']),{'run','name_session','neo_help','neo_read_output','openragnar_execute','openragnar_navigate','openragnar_status','openragnar_task'})
+        self.assertEqual(set(t['name'] for t in result['tools']),{'run','name_session','neo_help','neo_read_output','browserhelm_execute','browserhelm_navigate','browserhelm_status','browserhelm_task'})
     def test_status_never_contains_key(self):
         self.g.api_key='secret-value'
-        reply=self.g.handle({'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'openragnar_status','arguments':{}}})
+        reply=self.g.handle({'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'browserhelm_status','arguments':{}}})
         self.assertNotIn('secret-value', json.dumps(reply))
 
 if __name__ == '__main__': unittest.main()

@@ -1,10 +1,10 @@
 # Delegated browser execution (0.4.10)
 
-`openragnar_execute` runs one explicit read-only plan without returning to the main agent between each step. It does not turn an arbitrary goal into an unrestricted autonomous task.
+`browserhelm_execute` runs one explicit read-only plan without returning to the main agent between each step. It does not turn an arbitrary goal into an unrestricted autonomous task.
 
 ## Claude/Codex instructions
 
-> When OpenRagnar is available, prefer `openragnar_execute` for supported multi-step read-only browser work. Supply a bounded plan, explicit allowed actions and current-page text/selector completion checks. Use direct tools for unsupported work or a simple one-off action. Read partial results before recovery; do not repeat actions blindly. Use vision only when DOM information is insufficient. Preserve user approvals.
+> When BrowserHelm is available, prefer `browserhelm_execute` for supported multi-step read-only browser work. Supply a bounded plan, explicit allowed actions and current-page text/selector completion checks. Use direct tools for unsupported work or a simple one-off action. Read partial results before recovery; do not repeat actions blindly. Use vision only when DOM information is insufficient. Preserve user approvals.
 
 The gateway supplies this guidance during MCP initialization and in the tool catalog. Reconnect after updating. Instructions influence tool choice; they do not guarantee delegation.
 
@@ -59,7 +59,7 @@ No forms, button presses, submission, downloads, purchases or caller/model-gener
 
 Navigation reuse is keyed by the whole plan, allowed actions and checks. Two matching locally verified successes enable route reuse; live-link and final checks remain. Failed/stale attempts invalidate support and changed plans do not inherit shortcuts. The existing background OpenViking sync receives bounded outcomes. This learns navigation routes, not model weights or automatically improved inspection plans.
 
-Decision/vision calls feed task-ledger usage events. Host usage still requires client-reported data; missing usage and memory costs remain unknown. Track the overall user prompt with `openragnar_task`, not each internal step.
+Decision/vision calls feed task-ledger usage events. Host usage still requires client-reported data; missing usage and memory costs remain unknown. Track the overall user prompt with `browserhelm_task`, not each internal step.
 
 ## Validation
 
@@ -69,4 +69,4 @@ A warm fixture compared two individual Neo reads with one batched executor read:
 
 ## Pilot fixes (0.4.12)
 
-Each step now advertises its own required fields. `navigate` requires literal destination `text`; only `locate` accepts `instruction`. Invalid arguments fail before dispatch. Use `neo_help` with `topic: "openragnar_execute"` for complete examples, available before catalog discovery. Task markers are opt-in; see [task tracking](task-tracking.md). These changes address pilot overhead; another matched host benchmark is needed to measure total speed/cost improvement.
+Each step now advertises its own required fields. `navigate` requires literal destination `text`; only `locate` accepts `instruction`. Invalid arguments fail before dispatch. Use `neo_help` with `topic: "browserhelm_execute"` for complete examples, available before catalog discovery. Task markers are opt-in; see [task tracking](task-tracking.md). These changes address pilot overhead; another matched host benchmark is needed to measure total speed/cost improvement.

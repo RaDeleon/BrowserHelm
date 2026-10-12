@@ -253,7 +253,7 @@ def visual_act(gateway, args, request_id, lock_held=False):
         raise ValueError('Provide a page ID, target instruction, point/click action and optional successText (4–200 characters).')
     config = gateway.vision_config()
     if not config.get('enabled'):
-        raise ValueError('Vision is disabled. Enable it in OpenRagnar Settings, then reconnect the MCP client.')
+        raise ValueError('Vision is disabled. Enable it in BrowserHelm Settings, then reconnect the MCP client.')
     if not lock_held and not gateway.nav_lock.acquire(blocking=False):
         raise ValueError('Another delegated action is running in this connection.')
     try:

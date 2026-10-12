@@ -145,8 +145,8 @@ class TaskLedger:
                 if model_key(task['model'])=='claude-haiku-5.5': task['claude_cost']=None # context-tier pricing needs per-call context sizes
                 task['elapsed_seconds']=max(0,(task['finished'] or time.time())-task['started'])
                 all_rows=[dict(r) for r in db.execute("SELECT * FROM requests WHERE task_id=? AND method='tools/call'",(task['id'],))]
-                rows=[r for r in all_rows if r['tool']!='openragnar_task']
-                controls=[r for r in all_rows if r['tool']=='openragnar_task']
+                rows=[r for r in all_rows if r['tool'] not in ('browserhelm_task', 'openragnar_task')]
+                controls=[r for r in all_rows if r['tool'] in ('browserhelm_task', 'openragnar_task')]
                 task['tracking_calls']=len(controls);task['tracking_seconds']=sum(max(0,r['finished']-r['started']) for r in controls)
                 task['tool_calls']=len(rows);task['failures']=sum(r['status']=='error' for r in rows)
                 task['browser_calls']=sum(r['upstream_calls'] or 0 for r in rows)
@@ -156,7 +156,7 @@ class TaskLedger:
                 providers=[dict(r) for r in db.execute('SELECT * FROM provider_usage WHERE task_id=?',(task['id'],))]
                 for r in rows:
                     missing=max(0,(r['provider_calls'] or 0)-sum(e['request_id']==r['id'] for e in providers))
-                    for _ in range(missing): providers.append({'kind':'vision' if r['tool']=='openragnar_visual_act' else 'decision','provider':'unknown','model':'unknown','status':'unknown','usage':'{}','request_id':r['id']})
+                    for _ in range(missing): providers.append({'kind':'vision' if r['tool'] in ('browserhelm_visual_act', 'openragnar_visual_act') else 'decision','provider':'unknown','model':'unknown','status':'unknown','usage':'{}','request_id':r['id']})
                 for kind in ('decision','vision'):
                     events=[e for e in providers if e['kind']==kind];known=0.; unknown=0; tokens=0; token_unknown=0; bases=set()
                     for event in events:

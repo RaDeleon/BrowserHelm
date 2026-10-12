@@ -105,9 +105,49 @@ class ReleaseTests(unittest.TestCase):
             app = pathlib.Path(directory)
             (app / 'Contents').mkdir()
             with (app / 'Contents/Info.plist').open('wb') as file:
-                plistlib.dump({'CFBundleShortVersionString': '1.2.3-beta.1', 'CFBundleIdentifier': 'com.techinsf.openragnar', 'CFBundleExecutable': 'OpenRagnar'}, file)
+                plistlib.dump({'CFBundleShortVersionString': '1.2.3-beta.1', 'CFBundleIdentifier': 'com.techinsf.browserhelm', 'CFBundleExecutable': 'BrowserHelm'}, file)
             with patch.object(release, 'run', return_value=subprocess.CompletedProcess([], 0, 'arm64\n', '')):
                 self.assertEqual(release.app_metadata(app), {'version': '1.2.3-beta.1', 'architecture': 'arm64'})
+
+    def test_distribution_excludes_local_state_and_test_data(self):
+        with tempfile.TemporaryDirectory() as directory:
+            app = pathlib.Path(directory) / 'BrowserHelm.app'
+            engine = app / 'Contents/Resources/engine'
+            engine.mkdir(parents=True)
+            (app / 'Contents/MacOS').mkdir()
+            (app / 'Contents/Resources/runtime').mkdir()
+            (engine / 'browserhelm.py').write_text('# runtime')
+            release.verify_distribution_contents(app)
+            forbidden = ('Contents/Resources/engine/request.log',
+                         'Contents/Resources/runtime/metrics.sqlite',
+                         'Contents/Resources/runtime/capture.har',
+                         'Contents/Resources/runtime/trace.jsonl',
+                         'Contents/Resources/runtime/settings.json',
+                         'Contents/Resources/runtime/tests/session.txt',
+                         'Contents/Resources/runtime/outputs/payload.json',
+                         'Contents/Resources/engine/test_executor.py',
+                         'Contents/Resources/debug.json',
+                         'private-data.json')
+            for name in forbidden:
+                file = app / name; file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_text('synthetic fixture, no user data')
+                with self.subTest(name=name), self.assertRaises(ValueError):
+                    release.verify_distribution_contents(app)
+                file.unlink()
+                # Remove the forbidden fixture directory as well.
+                while file.parent not in (app, engine, app/'Contents/Resources/runtime', app/'Contents/Resources'):
+                    parent = file.parent
+                    if any(parent.iterdir()): break
+                    parent.rmdir(); file = parent
+            release.verify_distribution_contents(app)
+
+    def test_contaminated_app_rejected_before_signing_or_metadata_commands(self):
+        with tempfile.TemporaryDirectory() as directory:
+            app = pathlib.Path(directory)
+            (app / 'debug.log').write_text('synthetic')
+            with patch.object(release, 'run') as run, patch.object(release, 'app_metadata') as metadata:
+                with self.assertRaises(ValueError): release.verify_app(app)
+                run.assert_not_called(); metadata.assert_not_called()
 
     def test_checksum_reflects_modified_stapled_image(self):
         with tempfile.TemporaryDirectory() as directory:

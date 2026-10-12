@@ -8,18 +8,18 @@ import tempfile
 import time
 from unittest.mock import patch
 from executor import execute, read_page
-from openragnar import OpenRagnarGateway, load_settings
+from browserhelm import BrowserHelmGateway, load_settings
 
 
 def main():
     root=pathlib.Path(__file__).resolve().parent.parent
-    settings=load_settings(pathlib.Path.home()/'Library/Application Support/OpenRagnar/settings.json')
+    settings=load_settings(pathlib.Path.home()/'Library/Application Support/BrowserHelm/settings.json')
     # Synthetic fixture stays local and never uploads to the user's memory collection.
     settings['memory']={'enabled':False}
-    with tempfile.TemporaryDirectory(prefix='openragnar-executor-') as temporary:
-        gateway=OpenRagnarGateway(settings,pathlib.Path(temporary)/'outputs')
+    with tempfile.TemporaryDirectory(prefix='browserhelm-executor-') as temporary:
+        gateway=BrowserHelmGateway(settings,pathlib.Path(temporary)/'outputs')
         init=gateway.handle({'jsonrpc':'2.0','id':1,'method':'initialize','params':{
-            'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'OpenRagnar executor validation','version':'fixture'}}})
+            'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'BrowserHelm executor validation','version':'fixture'}}})
         if init.get('error'):raise RuntimeError('Neo handshake failed')
         gateway.upstream_call({'jsonrpc':'2.0','method':'notifications/initialized'})
         gateway.upstream_call({'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'name_session','arguments':{

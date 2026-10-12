@@ -7,8 +7,8 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 22) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Browser command").font(.system(size: 32, weight: .semibold, design: .serif))
-                        Text("A clear view of your agents, context and browser work.").foregroundStyle(.secondary)
+                        Text("Every request, in view.").font(.system(size: 32, weight: .semibold, design: .default))
+                        Text("Browser execution with less context overhead.").foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 16)
                     if let d = store.dashboard {
@@ -20,16 +20,12 @@ struct DashboardView: View {
                     }
                 }
                 if let d = store.dashboard {
-                    HStack(alignment: .top, spacing: 16) {
-                        ContextSavingsPanel(totals: d.totals).frame(maxWidth: .infinity)
-                        VStack(spacing: 12) {
-                            MetricCard(title: "Context sent to agents", value: "~" + number(estimate(d.totals.inputBytes + d.totals.clientText)), note: "Retained text · UTF-8 bytes ÷ 3", symbol: "text.alignleft")
-                            HStack(spacing: 12) {
-                                MetricCard(title: "Browser calls", value: number(d.totals.upstreamCalls), note: "\(number(d.totals.toolRequests)) agent requests", symbol: "cursorarrow.click", tint: RagnarTheme.ink)
-                                MetricCard(title: "Provider tokens", value: providerValue(d.totals), note: providerNote(d.totals), symbol: "cpu", tint: RagnarTheme.ink)
-                            }
-                        }.frame(maxWidth: .infinity)
+                    HStack(spacing: 16) {
+                        MetricCard(title: "Gateway requests", value: number(d.totals.toolRequests), note: "Across recorded sessions", symbol: "network")
+                        MetricCard(title: "Context reduction", value: "~" + number(estimate(d.totals.netTextSaved)), note: savingsNote(d.totals), symbol: "arrow.down.right")
+                        MetricCard(title: "Provider usage", value: providerValue(d.totals), note: providerNote(d.totals), symbol: "cpu", tint: HelmTheme.ink)
                     }
+                    ContextSavingsPanel(totals: d.totals)
                     RecentContextChart(requests: d.requests)
                     HStack(alignment: .top, spacing: 16) {
                         NeoOverviewPanel(neo: d.neo)
@@ -47,7 +43,7 @@ struct DashboardView: View {
                     DisclosureGroup("How to read these numbers") {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Context estimates use text UTF-8 bytes ÷ 3. They exclude hidden reasoning, full conversation replay, cache treatment, media billing and Claude's quota weighting. Provider-reported tokens are separate.")
-                            Text("Neo's totals include OpenRagnar traffic. They are not added to gateway savings. Claude-alone comparisons require matched totals entered by you.")
+                            Text("Neo's totals include BrowserHelm traffic. They are not added to gateway savings. Claude-alone comparisons require matched totals entered by you.")
                             Text("Local gateway counters retain \(d.retentionDays) days. Lists show up to \(d.sessionLimit) sessions and \(d.requestLimit) requests. Metrics exclude API keys, tool code and page contents.")
                         }.font(.caption).foregroundStyle(.secondary).padding(.top, 8)
                     }.font(.caption).foregroundStyle(.secondary)
@@ -71,7 +67,7 @@ struct NeoOverviewPanel: View {
     var neo: NeoSnapshot
     @State private var period = 0
     var body: some View {
-        RagnarPanel {
+        HelmPanel {
             VStack(alignment: .leading, spacing: 18) {
                 SectionHeading(title: "BrowserOS Neo", symbol: "globe", evidence: "NEO ESTIMATE")
                 Picker("History window", selection: $period) { Text("All time").tag(0); Text("30 days").tag(1); Text("7 days").tag(2) }.pickerStyle(.segmented)
@@ -81,7 +77,7 @@ struct NeoOverviewPanel: View {
                     StatDetail(title: "Tokens saved", value: "~" + number(window.rawTokenSavingsEstimate), note: "Versus Neo's screenshot-first model")
                     Divider()
                     HStack { Label(number(window.sessionCount) + " sessions", systemImage: "rectangle.stack"); Spacer(); Text(number(window.toolCallCount) + " moves") }.font(.caption).foregroundStyle(.secondary)
-                    Text("All Neo traffic, including OpenRagnar. These savings are separate and are not added to gateway savings.").font(.caption).foregroundStyle(.secondary)
+                    Text("All Neo traffic, including BrowserHelm. These savings are separate and are not added to gateway savings.").font(.caption).foregroundStyle(.secondary)
                 } else { Text(neo.error ?? "No measured Neo history yet.").font(.callout).foregroundStyle(.secondary) }
             }
         }
@@ -91,21 +87,21 @@ struct BenchmarkOverviewPanel: View {
     var benchmarks: [Benchmark]
     var openSessions: () -> Void
     var body: some View {
-        RagnarPanel {
+        HelmPanel {
             VStack(alignment: .leading, spacing: 18) {
                 SectionHeading(title: "Claude comparison", symbol: "equal.square", evidence: "ENTERED TOTALS")
                 let matched = benchmarks.filter { $0.claudeTokens != nil && $0.gatewayTokens != nil }
                 if matched.isEmpty {
                     HStack(alignment: .top, spacing: 14) {
-                        Image(systemName: "chart.bar.doc.horizontal").font(.system(size: 29, weight: .light)).foregroundStyle(RagnarTheme.bronze)
+                        Image(systemName: "chart.bar.doc.horizontal").font(.system(size: 29, weight: .light)).foregroundStyle(HelmTheme.accent)
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Start a matched trial").font(.title3.weight(.medium))
-                            Text("Run the same task with Claude alone and with OpenRagnar, then enter the client's totals in Sessions.").font(.callout).foregroundStyle(.secondary)
+                            Text("Run the same task with Claude alone and with BrowserHelm, then enter the client's totals in Sessions.").font(.callout).foregroundStyle(.secondary)
                         }
                     }.padding(.vertical, 8)
                 } else {
                     StatDetail(title: "Claude alone", value: number(matched.reduce(0) { $0 + ($1.claudeTokens ?? 0) }))
-                    StatDetail(title: "With OpenRagnar", value: number(matched.reduce(0) { $0 + ($1.gatewayTokens ?? 0) }))
+                    StatDetail(title: "With BrowserHelm", value: number(matched.reduce(0) { $0 + ($1.gatewayTokens ?? 0) }))
                     StatDetail(title: "Net tokens saved", value: number(matched.reduce(0) { $0 + ($1.claudeTokens ?? 0) - ($1.gatewayTokens ?? 0) }), note: "\(matched.count) matched trials · can be negative")
                 }
                 let neoTrials = benchmarks.filter { $0.neoTokens != nil && $0.gatewayTokens != nil }
@@ -123,9 +119,9 @@ struct BenchmarkOverviewPanel: View {
 struct DirectNeoPanel: View {
     var neo: NeoSnapshot
     var body: some View {
-        RagnarPanel {
+        HelmPanel {
             VStack(alignment: .leading, spacing: 16) {
-                SectionHeading(title: "Neo without OpenRagnar", symbol: "arrow.up.forward", evidence: "RECENT HISTORY")
+                SectionHeading(title: "Neo without BrowserHelm", symbol: "arrow.up.forward", evidence: "RECENT HISTORY")
                 let direct = (neo.sessions ?? []).filter { !$0.viaGateway }
                 if neo.available {
                     let reported = direct.compactMap(\.tokens)
@@ -134,7 +130,7 @@ struct DirectNeoPanel: View {
                         Text("tokens used").font(.caption).foregroundStyle(.secondary)
                     }
                     Text("\(direct.count) sessions · \(number(direct.reduce(0) { $0 + $1.moves })) moves").font(.caption).foregroundStyle(.secondary)
-                    Text("Sessions not identified as OpenRagnar in Neo's latest 100 records. Direct-session savings need a matched baseline.").font(.caption).foregroundStyle(.secondary)
+                    Text("Sessions not identified as BrowserHelm in Neo's latest 100 records. Direct-session savings need a matched baseline.").font(.caption).foregroundStyle(.secondary)
                     if direct.contains(where: { $0.tokens == nil }) { Text("Some token estimates are missing; only reported values are included.").font(.caption).foregroundStyle(.secondary) }
                     if neo.hasMore == true { Text("Older Neo sessions exist.").font(.caption).foregroundStyle(.secondary) }
                 } else { Text(neo.error ?? "Neo history unavailable.").font(.callout).foregroundStyle(.secondary) }
@@ -146,7 +142,7 @@ struct MemoryOverviewPanel: View {
     var memory: MemorySnapshot?
     var openMemory: () -> Void
     var body: some View {
-        RagnarPanel {
+        HelmPanel {
             VStack(alignment: .leading, spacing: 16) {
                 SectionHeading(title: "Experience memory", symbol: "brain", evidence: "OPENVIKING")
                 if let memory {

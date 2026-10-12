@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from metrics import Metrics
 from task_metrics import TOKEN_KEYS, claude_cost
-from openragnar import OpenRagnarGateway
+from browserhelm import BrowserHelmGateway
 
 class TaskTests(unittest.TestCase):
     def setUp(self):
@@ -60,7 +60,7 @@ class TaskTests(unittest.TestCase):
         self.assertEqual(next(t for t in self.ledger.snapshot() if t['id']==other)['tool_calls'],0)
     def test_missing_provider_event_never_means_free_cloud_call(self):
         tid=self.start();now=time.time()
-        self.metrics.record(dict(id='missing',task_id=tid,method='tools/call',tool='openragnar_visual_act',started=now,finished=now,status='ok',provider_calls=1,input_bytes=3,client_text=3))
+        self.metrics.record(dict(id='missing',task_id=tid,method='tools/call',tool='browserhelm_visual_act',started=now,finished=now,status='ok',provider_calls=1,input_bytes=3,client_text=3))
         task=self.ledger.snapshot()[0];self.assertEqual(task['vision']['calls'],1);self.assertIsNone(task['vision']['cost'])
     def test_local_api_zero_does_not_fabricate_tokens(self):
         tid=self.start();self.record(tid,events=[dict(kind='vision',provider='ollama',model='local',status='error',usage={})])
@@ -72,12 +72,12 @@ class TaskTests(unittest.TestCase):
     def test_effort_has_no_invented_price_multiplier(self):
         usage=dict(zip(TOKEN_KEYS,[1000000,1000000,0,0,0]));self.assertEqual(claude_cost('Opus 5.5',usage),24)
     def test_gateway_markers_are_local_and_bind_call(self):
-        g=OpenRagnarGateway({'provider':'none'},self.temp.name);g.enable_metrics(self.path);g.metrics.start('claude-ai')
-        start=g.handle({'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'openragnar_task','arguments':{'action':'start','label':'Explicit prompt','model':'claude-opus-5.5'}}})
+        g=BrowserHelmGateway({'provider':'none'},self.temp.name);g.enable_metrics(self.path);g.metrics.start('claude-ai')
+        start=g.handle({'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'browserhelm_task','arguments':{'action':'start','label':'Explicit prompt','model':'claude-opus-5.5'}}})
         self.assertFalse(start['result'].get('isError'));self.assertIsNotNone(g.metrics.tasks.active(g.metrics.sid))
-        result=g.handle({'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'openragnar_status','arguments':{}}})
+        result=g.handle({'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'browserhelm_status','arguments':{}}})
         tid=g.metrics.tasks.active(g.metrics.sid);self.assertEqual(g.metrics.tasks.snapshot()[0]['tool_calls'],1)
-        end=g.handle({'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'openragnar_task','arguments':{'action':'finish','task_id':tid,'status':'complete','verification':'agent_reported'}}})
+        end=g.handle({'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'browserhelm_task','arguments':{'action':'finish','task_id':tid,'status':'complete','verification':'agent_reported'}}})
         self.assertFalse(end['result'].get('isError'));self.assertEqual(g.metrics.tasks.snapshot()[0]['tool_calls'],1)
         self.assertEqual(g.metrics.tasks.snapshot()[0]['tracking_calls'],2)
         g.artifacts.cleanup();g.moves_pool.shutdown()

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MainView: View {
     @ObservedObject var store: Store
-    @AppStorage("openragnar.appearance") private var appearance = "system"
+    @AppStorage("browserhelm.appearance") private var appearance = "dark"
     var body: some View {
         HStack(spacing: 0) {
             sidebar
@@ -38,31 +38,30 @@ struct MainView: View {
                     Spacer()
                 }.foregroundStyle(.secondary).padding(.horizontal, 24).padding(.vertical, 12)
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
-        }.frame(minWidth: 1120, minHeight: 740)
+        }.frame(minWidth: 1120, minHeight: 740).background(HelmTheme.background)
     }
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(spacing: 10) {
-                RagnarMark()
+                HelmMark()
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("OpenRagnar").font(.system(size: 20, weight: .semibold, design: .serif))
-                    Text("Browser execution gateway").font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text("BrowserHelm").font(.system(size: 20, weight: .semibold))
+                    Text("Agent execution gateway").font(.system(size: 11)).foregroundStyle(.secondary)
                 }
             }.padding(.horizontal, 18).padding(.top, 24)
             List(selection: $store.selectedTab) {
-                Label("Dashboard", systemImage: "chart.bar.xaxis").tag(0)
-                Label("Connectors", systemImage: "point.3.connected.trianglepath.dotted").tag(1)
+                Label("Dashboard", systemImage: "square.grid.2x2").tag(0)
                 Label("Tasks", systemImage: "checklist").tag(6)
+                Label("Connectors", systemImage: "cable.connector").tag(1)
                 Label("Sessions", systemImage: "clock.arrow.circlepath").tag(2)
-                Label("Memory", systemImage: "brain").tag(4)
-                Label("Diagnostics", systemImage: "stethoscope").tag(5)
+                Label("Memory", systemImage: "externaldrive").tag(4)
+                Label("Diagnostics", systemImage: "waveform.path.ecg").tag(5)
                 Label("Settings", systemImage: "gearshape").tag(3)
             }.listStyle(.sidebar)
             VStack(alignment: .leading, spacing: 12) {
                 Divider()
-                Text("Named after Ragnar Lothbrok").font(.caption).foregroundStyle(.secondary)
                 Text("Local gateway · " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development")).font(.caption2.monospaced()).foregroundStyle(.secondary)
             }.padding(18)
-        }.frame(width: 222).frame(maxHeight: .infinity).background(.regularMaterial)
+        }.frame(width: 222).frame(maxHeight: .infinity).background(HelmTheme.sidebar)
     }
 }

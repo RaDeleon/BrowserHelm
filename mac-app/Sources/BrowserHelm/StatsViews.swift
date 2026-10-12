@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MetricCard: View {
     var title: String; var value: String; var note: String; var symbol: String
-    var tint: Color = RagnarTheme.bronze
+    var tint: Color = HelmTheme.accent
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -13,7 +13,7 @@ struct MetricCard: View {
             Text(value).font(.system(size: 27, weight: .semibold)).monospacedDigit().minimumScaleFactor(0.7).lineLimit(1).textSelection(.enabled)
             Text(note).font(.caption).foregroundStyle(.secondary).lineLimit(2).frame(minHeight: 28, alignment: .topLeading)
         }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
-            .background(RagnarTheme.surface, in: RoundedRectangle(cornerRadius: 12))
+            .background(HelmTheme.surface, in: RoundedRectangle(cornerRadius: 12))
             .overlay(alignment: .topLeading) { RoundedRectangle(cornerRadius: 2).fill(tint.opacity(0.7)).frame(width: 26, height: 2).padding(.leading, 16) }
     }
 }
@@ -28,9 +28,9 @@ struct StatsBar: View {
     }
     @ViewBuilder private func metrics(_ t: Counters) -> some View {
         MetricCard(title: "Agent context", value: "~" + number(estimate(t.inputBytes + t.clientText)), note: "Text token equivalents used", symbol: "text.alignleft")
-        MetricCard(title: "Context saved", value: "~" + number(estimate(t.netTextSaved)), note: savingsNote(t), symbol: "arrow.down.right", tint: t.netTextSaved >= 0 ? RagnarTheme.bronze : .orange)
-        MetricCard(title: "Browser calls", value: number(t.upstreamCalls), note: "\(number(t.toolRequests)) agent requests", symbol: "cursorarrow.click", tint: RagnarTheme.ink)
-        MetricCard(title: "Provider tokens", value: t.providerCalls == 0 ? "—" : number(t.providerTokens) + (t.providerUnknown > 0 ? "+?" : ""), note: t.providerCalls == 0 ? "No decision calls recorded" : t.providerUnknown > 0 ? "\(t.providerUnknown) calls lack usage totals" : "Reported · \(t.providerCalls) \(t.providerCalls == 1 ? "decision" : "decisions")", symbol: "cpu", tint: RagnarTheme.ink)
+        MetricCard(title: "Context saved", value: "~" + number(estimate(t.netTextSaved)), note: savingsNote(t), symbol: "arrow.down.right", tint: t.netTextSaved >= 0 ? HelmTheme.accent : .orange)
+        MetricCard(title: "Browser calls", value: number(t.upstreamCalls), note: "\(number(t.toolRequests)) agent requests", symbol: "cursorarrow.click", tint: HelmTheme.ink)
+        MetricCard(title: "Provider tokens", value: t.providerCalls == 0 ? "—" : number(t.providerTokens) + (t.providerUnknown > 0 ? "+?" : ""), note: t.providerCalls == 0 ? "No decision calls recorded" : t.providerUnknown > 0 ? "\(t.providerUnknown) calls lack usage totals" : "Reported · \(t.providerCalls) \(t.providerCalls == 1 ? "decision" : "decisions")", symbol: "cpu", tint: HelmTheme.ink)
     }
 }
 func savingsNote(_ counters: Counters) -> String {
@@ -46,7 +46,7 @@ struct ContextSavingsPanel: View {
     private var current: Int { totals.inputBytes + totals.clientText }
     private var ratio: Double { baseline > 0 ? Double(totals.netTextSaved) / Double(baseline) : 0 }
     var body: some View {
-        RagnarPanel(accent: true) {
+        HelmPanel(accent: true) {
             VStack(alignment: .leading, spacing: 20) {
                 SectionHeading(title: "Context savings", symbol: "arrow.down.right", evidence: "TEXT ESTIMATE")
                 HStack(alignment: .center, spacing: 22) {
@@ -58,8 +58,8 @@ struct ContextSavingsPanel: View {
                     SavingsRing(ratio: ratio, available: baseline > 0)
                 }
                 VStack(spacing: 15) {
-                    comparisonBar("Direct Neo equivalent", bytes: baseline, tint: RagnarTheme.ink)
-                    comparisonBar("Through OpenRagnar", bytes: current, tint: RagnarTheme.bronze)
+                    comparisonBar("Direct Neo equivalent", bytes: baseline, tint: HelmTheme.ink)
+                    comparisonBar("Through BrowserHelm", bytes: current, tint: HelmTheme.accent)
                 }
                 Text("Same forwarded calls, before and after compaction. Includes catalog and instruction overhead; this is not a separate task run.").font(.caption).foregroundStyle(.secondary)
                 if totals.mediaCount > 0 { Text("\(totals.mediaCount) image/audio blocks passed through; billed media tokens are unknown.").font(.caption).foregroundStyle(.secondary) }
@@ -72,7 +72,7 @@ struct ContextSavingsPanel: View {
             GeometryReader { geometry in
                 let fraction = Double(max(0, bytes)) / Double(max(1, max(baseline, current)))
                 ZStack(alignment: .leading) {
-                    Capsule().fill(RagnarTheme.muted)
+                    Capsule().fill(HelmTheme.muted)
                     Capsule().fill(tint).frame(width: geometry.size.width * fraction)
                 }
             }.frame(height: 7)
@@ -85,8 +85,8 @@ private struct SavingsRing: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         ZStack {
-            Circle().stroke(RagnarTheme.muted, lineWidth: 6)
-            Circle().trim(from: 0, to: min(1, abs(ratio))).stroke(ratio < 0 ? Color.orange : RagnarTheme.bronze, style: StrokeStyle(lineWidth: 6, lineCap: .round)).rotationEffect(.degrees(-90))
+            Circle().stroke(HelmTheme.muted, lineWidth: 6)
+            Circle().trim(from: 0, to: min(1, abs(ratio))).stroke(ratio < 0 ? Color.orange : HelmTheme.accent, style: StrokeStyle(lineWidth: 6, lineCap: .round)).rotationEffect(.degrees(-90))
             VStack(spacing: 3) {
                 Text(available ? String(format: "%.1f%%", abs(ratio) * 100) : "—").font(.system(size: 22, weight: .semibold)).monospacedDigit()
                 Text(!available ? "waiting" : ratio < 0 ? "more text" : "less text").font(.system(size: 10)).foregroundStyle(.secondary)

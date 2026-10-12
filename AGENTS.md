@@ -1,4 +1,4 @@
-# OpenRagnar development instructions
+# BrowserHelm development instructions
 
 <!-- codebase-memory-mcp:start -->
 For structural codebase exploration, use the installed `codebase-memory` skill.
@@ -15,14 +15,14 @@ For structural codebase exploration, use the installed `codebase-memory` skill.
 
 ## Benchmark and reporting requirements
 
-- Follow `docs/benchmarks.md`. Compare equivalent tasks, the same main-agent model, comparable browser state and tool exposure. Include Neo directly and OpenRagnar local/cloud modes, with and without learning. Report first runs, warmed runs and learned repeats separately.
+- Follow `docs/benchmarks.md`. Compare equivalent tasks, the same main-agent model, comparable browser state and tool exposure. Include Neo directly and BrowserHelm local/cloud modes, with and without learning. Report first runs, warmed runs and learned repeats separately.
 - Measure elapsed time from task submission through independently verified completion. Publish the workload, settings, sample size, success rate, median/tail latency, main-agent turns and usage, provider usage and total cost assumptions. Retain failed attempts rather than reporting only fast successes.
 - Keep measured API costs, client-reported tokens, approximate text token equivalents, Neo estimates and subscription allowance usage distinct. Missing usage or cost is unknown, not zero. Lower token usage does not by itself prove a lower subscription bill or a specific quota reduction.
 - Passing regressions, smaller payloads, avoided calls, individual model latency and controlled fixture results establish those mechanisms. Claim 10× performance only for a matched end-to-end workload that demonstrates it; disclose the corresponding quality and cost results.
 
 ## Installing updated builds
 
-- After validating a new OpenRagnar app build, install it at `/Applications/OpenRagnar.app`. Creating a DMG or staging a copy in `dist/` does not complete the update.
+- After validating a new BrowserHelm app build, install it at `/Applications/BrowserHelm.app`. Creating a DMG or staging a copy in `dist/` does not complete the update.
 - Preserve the user's settings, Keychain entries, metrics, diagnostics, and experience memory during installation.
 - Wait for active MCP/browser tasks to finish before replacing the installed app; do not interrupt their work to update it.
 - Verify the installed version and code signature. Reconnect MCP clients after installation and confirm they report the new version before calling the update complete.

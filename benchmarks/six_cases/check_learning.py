@@ -2,8 +2,8 @@
 import json,pathlib,sys,tempfile
 from unittest.mock import patch
 ROOT=pathlib.Path(__file__).resolve().parents[2]
-sys.path.insert(0,str(ROOT/'dist/OpenRagnar.app/Contents/Resources/engine'))
-from openragnar import OpenRagnarGateway
+sys.path.insert(0,str(ROOT/'dist/BrowserHelm.app/Contents/Resources/engine'))
+from browserhelm import BrowserHelmGateway
 from executor import execute
 from experience import ExperienceMemory
 class Memory(ExperienceMemory):
@@ -17,13 +17,13 @@ class Selector:
   self.calls+=1
   choice=next((k for k,v in options.items() if isinstance(v,dict) and v.get('url')=='https://docs.typesafe.ai/api'),'BLOCKED')
   return {'choice':choice,'probability':1,'usage':{},'model':self.model,'latencySeconds':0}
-settings=json.loads((pathlib.Path.home()/'Library/Application Support/OpenRagnar/settings.json').read_text());settings['memory']={'enabled':True}
+settings=json.loads((pathlib.Path.home()/'Library/Application Support/BrowserHelm/settings.json').read_text());settings['memory']={'enabled':True}
 args={'startUrl':'https://docs.typesafe.ai/models','goal':'Find the API reference and read its first heading','allowedActions':['navigate','extract'],'steps':[{'action':'navigate','text':'floats that sum to 1','maxHops':2},{'action':'extract','fields':[{'name':'heading','selector':'h1'}]}],'completion':{'textPresent':['floats that sum to 1'],'selectorsPresent':['h1']},'maxSeconds':45}
 rows=[];owned=[]
 with tempfile.TemporaryDirectory(prefix='ragnar-sixcase-learning-') as folder:
  memory=Memory(settings['memory'],pathlib.Path(folder)/'experiences.sqlite');selector=Selector()
  for i in range(3):
-  g=OpenRagnarGateway(settings,pathlib.Path(folder)/('outputs-'+str(i)));g.memory=memory
+  g=BrowserHelmGateway(settings,pathlib.Path(folder)/('outputs-'+str(i)));g.memory=memory
   g.handle({'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'Six-case isolated learning control','version':'1'}}});g.upstream_call({'jsonrpc':'2.0','method':'notifications/initialized'})
   with patch.object(g,'provider',return_value=selector):
    before=selector.calls;r=execute(g,args,10+i)

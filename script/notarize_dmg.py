@@ -10,7 +10,7 @@ def preflight(dmg):
     run(['/usr/bin/hdiutil', 'verify', dmg], capture_output=True)
     image_signature = verify_developer_signature(dmg)
     with mounted_dmg(dmg) as mount:
-        metadata = verify_app(mount / 'OpenRagnar.app', release=True)
+        metadata = verify_app(mount / 'BrowserHelm.app', release=True)
         require_developer_id(image_signature, team=metadata['signature']['team'])
         if not (mount / 'Applications').is_symlink() or (mount / 'Applications').readlink() != pathlib.Path('/Applications'):
             raise ValueError('DMG is missing its Applications shortcut.')

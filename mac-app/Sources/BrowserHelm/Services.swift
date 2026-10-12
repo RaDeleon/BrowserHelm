@@ -2,7 +2,7 @@ import Foundation
 import Security
 struct AppError: LocalizedError { var text: String; var errorDescription: String? { text } }
 enum Keys {
-    static func query(_ account: String) -> [String: Any] { [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account] }
+    static func query(_ account: String) -> [String: Any] { [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: keychainService, kSecAttrAccount as String: account] }
     static func has(_ account: String) -> Bool {
         var q = query(account); q[kSecReturnAttributes as String] = true
         return SecItemCopyMatching(q as CFDictionary, nil) == errSecSuccess
@@ -11,7 +11,7 @@ enum Keys {
         var q = query(account); q[kSecReturnData as String] = true; q[kSecMatchLimit as String] = kSecMatchLimitOne
         var item: CFTypeRef?; let status = SecItemCopyMatching(q as CFDictionary, &item)
         if status == errSecItemNotFound { return "" }
-        guard status == errSecSuccess, let data = item as? Data, let key = String(data: data, encoding: .utf8) else { throw AppError(text: "Keychain access failed (\(status)). Allow OpenRagnar to access its saved key.") }
+        guard status == errSecSuccess, let data = item as? Data, let key = String(data: data, encoding: .utf8) else { throw AppError(text: "Keychain access failed (\(status)). Allow BrowserHelm to access its saved key.") }
         return key
     }
     static func save(_ key: String, account: String) throws {
@@ -32,19 +32,19 @@ enum Runner {
     static func process(_ mode: String, extra: [String] = []) throws -> Process {
         let resources = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources")
         let python = resources.appendingPathComponent("runtime/bin/python3.12")
-        guard FileManager.default.isExecutableFile(atPath: python.path) else { throw AppError(text: "Bundled Python runtime is missing. Reinstall OpenRagnar from its DMG.") }
+        guard FileManager.default.isExecutableFile(atPath: python.path) else { throw AppError(text: "Bundled Python runtime is missing. Reinstall BrowserHelm from its DMG.") }
         let config = Configuration.load()
         let process = Process(); process.executableURL = python
         process.arguments = ["-I", "-B", resources.appendingPathComponent("engine/launch.py").path, "--settings", settingsURL.path, "--output-dir", support.appendingPathComponent("outputs").path]
         if mode != "--mcp" { process.arguments!.append(mode) }
         var environment = ProcessInfo.processInfo.environment
-        for key in ["PYTHONHOME", "PYTHONPATH", "OPENRAGNAR_API_KEY", "OPENRAGNAR_VISION_API_KEY"] { environment.removeValue(forKey: key) }
-        if config.provider != "none" && mode == "--test-provider" { environment["OPENRAGNAR_API_KEY"] = try Keys.read(config.provider) }
-        if config.vision.provider == "openrouter" && mode == "--test-vision" { environment["OPENRAGNAR_VISION_API_KEY"] = try Keys.read("openrouter") }
+        for key in ["PYTHONHOME", "PYTHONPATH", "BROWSERHELM_API_KEY", "BROWSERHELM_VISION_API_KEY"] { environment.removeValue(forKey: key) }
+        if config.provider != "none" && mode == "--test-provider" { environment["BROWSERHELM_API_KEY"] = try Keys.read(config.provider) }
+        if config.vision.provider == "openrouter" && mode == "--test-vision" { environment["BROWSERHELM_VISION_API_KEY"] = try Keys.read("openrouter") }
         environment["PYTHONDONTWRITEBYTECODE"] = "1"
         // Browser tools do not need a decision-provider credential. Fetch lazily via a private child pipe.
-        if mode == "--mcp" { environment["OPENRAGNAR_KEY_HELPER"] = Bundle.main.executableURL!.path }
-        else { environment.removeValue(forKey: "OPENRAGNAR_KEY_HELPER") }
+        if mode == "--mcp" { environment["BROWSERHELM_KEY_HELPER"] = Bundle.main.executableURL!.path }
+        else { environment.removeValue(forKey: "BROWSERHELM_KEY_HELPER") }
         process.arguments! += extra
         process.environment = environment
         return process

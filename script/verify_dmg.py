@@ -13,15 +13,15 @@ def main():
     parser.add_argument('--require-notarized', action='store_true', help='Require Developer ID, Hardened Runtime, ticket and Gatekeeper acceptance.')
     args = parser.parse_args()
     if args.dmg is None:
-        metadata = app_metadata(ROOT / 'dist/OpenRagnar.app')
-        args.dmg = ROOT / ('dist/OpenRagnar-%s-%s.dmg' % (metadata['version'], metadata['architecture']))
+        metadata = app_metadata(ROOT / 'dist/BrowserHelm.app')
+        args.dmg = ROOT / ('dist/BrowserHelm-%s-%s.dmg' % (metadata['version'], metadata['architecture']))
     run(['/usr/bin/hdiutil', 'verify', args.dmg], capture_output=True)
     if args.require_notarized:
         from notarize_dmg import preflight
         preflight(args.dmg)
         run(['/usr/bin/xcrun', 'stapler', 'validate', args.dmg], capture_output=True)
     with mounted_dmg(args.dmg) as mount:
-        app = mount / 'OpenRagnar.app'
+        app = mount / 'BrowserHelm.app'
         metadata = verify_app(app, release=args.require_notarized)
         if (mount / 'Applications').readlink() != pathlib.Path('/Applications'):
             raise ValueError('DMG Applications shortcut is incorrect.')
@@ -32,7 +32,7 @@ def main():
         report = {'dmg': str(args.dmg), 'mountedReadOnly': True, 'bundledRuntimeImports': True,
                   'app': metadata, 'notarizationVerified': args.require_notarized, 'liveChecksRun': args.live}
         if args.live:
-            result = run([app / 'Contents/MacOS/OpenRagnar', '--test-browser'], capture_output=True, text=True, timeout=40)
+            result = run([app / 'Contents/MacOS/BrowserHelm', '--test-browser'], capture_output=True, text=True, timeout=40)
             output = json.loads(result.stdout)
             if not output.get('connected') or output.get('tools', 0) < 26:
                 raise ValueError('Relocated MCP browser connection failed.')

@@ -7,7 +7,7 @@ struct ConnectorsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 Text("MCP connectors").font(.title2.bold())
-                Text("Your client apps connect to OpenRagnar over MCP. OpenRagnar forwards browser work to your running Neo instance.").foregroundStyle(.secondary)
+                Text("Your client apps connect to BrowserHelm over MCP. BrowserHelm forwards browser work to your running Neo instance.").foregroundStyle(.secondary)
                 GroupBox("OpenViking · experience memory") {
                     HStack {
                         VStack(alignment: .leading, spacing: 6) {
@@ -20,7 +20,7 @@ struct ConnectorsView: View {
                 }
                 GroupBox {
                     HStack(spacing: 20) {
-                        Image(systemName: "globe").font(.largeTitle).foregroundStyle(RagnarTheme.bronze)
+                        Image(systemName: "globe").font(.largeTitle).foregroundStyle(HelmTheme.accent)
                         VStack(alignment: .leading, spacing: 6) {
                             Text("BrowserOS Neo").font(.headline)
                             Text(store.config.upstream).font(.caption.monospaced()).textSelection(.enabled)
@@ -40,17 +40,17 @@ struct ConnectorsView: View {
                                     .foregroundStyle(client.activeSessions > 0 ? .green : .secondary)
                             }
                             Text(client.path).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
-                            Text("Configured means a local entry exists. A live session means OpenRagnar recorded an open MCP process; it does not imply a request is currently running.").font(.caption).foregroundStyle(.secondary)
-                            HStack {
-                                if client.name == "Claude Desktop" { Button("Connect Claude Desktop") { if store.save() { store.connectClaude() } }.buttonStyle(.borderedProminent) }
-                                if client.name == "Codex" { Button("Connect Codex") { store.connectCodex() }.buttonStyle(.borderedProminent).disabled(store.busy) }
-                                Button(client.name == "Codex" ? "Copy Codex MCP config" : "Copy MCP config") { client.name == "Codex" ? store.copyCodex() : store.copyMCP() }
+                            Text("Configured means a local entry exists. A live session means BrowserHelm recorded an open MCP process; it does not imply a request is currently running.").font(.caption).foregroundStyle(.secondary)
+                            if client.name == "Claude Desktop" || client.name == "Codex" {
+                                ClientConnectionActions(store: store, client: client.name)
+                            } else {
+                                Button("Copy MCP config") { store.copyMCP() }
                             }
                             if let others = client.otherConnectors, !others.isEmpty {
                                 Divider()
                                 Text("Other MCP entries in this client").font(.subheadline.weight(.medium))
                                 Text(others.joined(separator: "  ·  ")).font(.callout).textSelection(.enabled)
-                                Text("These connect directly to the client. OpenRagnar does not route or meter their requests. Cloud connectors may not appear in local configuration.").font(.caption).foregroundStyle(.secondary)
+                                Text("These connect directly to the client. BrowserHelm does not route or meter their requests. Cloud connectors may not appear in local configuration.").font(.caption).foregroundStyle(.secondary)
                             }
                         }.padding(12)
                     }
@@ -65,8 +65,30 @@ struct ConnectorsView: View {
                         }
                     }.padding(12)
                 }
-                Text("Install the app in Applications before copying configuration. Enable OpenRagnar's tools in the client. Keep BrowserOS Neo running, and disable its duplicate direct connector in a chat when testing gateway savings.").font(.callout).foregroundStyle(.secondary)
+                Text("Install the app in Applications before copying configuration. Enable BrowserHelm's tools in the client. Keep BrowserOS Neo running, and disable its duplicate direct connector in a chat when testing gateway savings.").font(.callout).foregroundStyle(.secondary)
             }.padding(24)
+        }
+    }
+}
+
+struct ClientConnectionActions: View {
+    @ObservedObject var store: Store
+    var client: String
+    @State private var confirmRemoval = false
+    var body: some View {
+        HStack {
+            Button("Connect \(client)") {
+                if client == "Codex" { store.connectCodex() }
+                else { store.connectClaude() }
+            }.buttonStyle(.borderedProminent)
+            Button("Remove from \(client)", role: .destructive) { confirmRemoval = true }
+            Button("Copy MCP config") { client == "Codex" ? store.copyCodex() : store.copyMCP() }
+        }.disabled(store.busy)
+        .alert("Remove BrowserHelm from \(client)?", isPresented: $confirmRemoval) {
+            Button("Cancel", role: .cancel) {}
+            Button("Remove", role: .destructive) { store.disconnectClient(client) }
+        } message: {
+            Text("Removes only BrowserHelm’s saved MCP entry and keeps a backup. Other connectors, app settings and memory stay intact. Finish active browser work first, then restart the client to unload the tools.")
         }
     }
 }
@@ -107,7 +129,7 @@ struct SessionsView: View {
                 Text("Sessions & requests").font(.title2.bold())
                 Spacer()
                 if source == 0 { Toggle("Problems only", isOn: $problemsOnly).toggleStyle(.checkbox) }
-                Picker("Source", selection: $source) { Text("OpenRagnar").tag(0); Text("Neo history").tag(1) }.pickerStyle(.segmented).frame(width: 280)
+                Picker("Source", selection: $source) { Text("BrowserHelm").tag(0); Text("Neo history").tag(1) }.pickerStyle(.segmented).frame(width: 280)
             }
             if let d = store.dashboard {
                 if source == 0 {
@@ -122,7 +144,7 @@ struct SessionsView: View {
                                 Button("Enter benchmark") { benchmarkSession = s }
                             }.font(.caption)
                             if let b = d.benchmarks.first(where: { $0.sessionId == s.id }) {
-                                Text("Matched trial totals entered by you: Claude alone \(b.claudeTokens.map(number) ?? "—") · Neo alone \(b.neoTokens.map(number) ?? "—") · Claude + OpenRagnar \(b.gatewayTokens.map(number) ?? "—") tokens").font(.caption).foregroundStyle(.secondary)
+                                Text("Matched trial totals entered by you: Claude alone \(b.claudeTokens.map(number) ?? "—") · Neo alone \(b.neoTokens.map(number) ?? "—") · Claude + BrowserHelm \(b.gatewayTokens.map(number) ?? "—") tokens").font(.caption).foregroundStyle(.secondary)
                             }
                         }
                         let rows = d.requests.filter { (selected.isEmpty || $0.sessionId == selected) && (!problemsOnly || $0.status != "ok") }
@@ -148,12 +170,12 @@ struct SessionsView: View {
                     Table(d.neo.sessions ?? []) {
                         TableColumn("Session") { s in VStack(alignment: .leading, spacing: 3) { Text(s.label); Text(timestamp(s.started)).font(.caption).foregroundStyle(.secondary) } }.width(min: 200, ideal: 300)
                         TableColumn("Client") { s in Text(s.client) }.width(min: 120, ideal: 180)
-                        TableColumn("Route") { s in Text(s.viaGateway ? "OpenRagnar" : "Direct / other") }.width(min: 100, ideal: 130)
+                        TableColumn("Route") { s in Text(s.viaGateway ? "BrowserHelm" : "Direct / other") }.width(min: 100, ideal: 130)
                         TableColumn("Tokens est.") { s in Text(s.tokens.map { "~"+number($0) } ?? "—") }
                         TableColumn("Moves") { s in Text(number(s.moves)) }.width(70)
                         TableColumn("Status") { s in Text(s.status) }.width(80)
                     }
-                    Text("Latest 100 sessions reported by Neo, including your previous OpenRagnar sessions. Neo counts SDK dispatches as moves and reports estimated tool tokens. Old sessions do not have gateway savings counters.").font(.caption).foregroundStyle(.secondary)
+                    Text("Latest 100 sessions reported by Neo, including your previous BrowserHelm sessions. Neo counts SDK dispatches as moves and reports estimated tool tokens. Old sessions do not have gateway savings counters.").font(.caption).foregroundStyle(.secondary)
                 }
             } else { ProgressView("Loading sessions…"); Spacer() }
         }.padding(24).sheet(item: $benchmarkSession) { BenchmarkView(store: store, session: $0) }
@@ -181,7 +203,7 @@ struct BenchmarkView: View {
             Text("Enter end-to-end token totals you obtained from the client or provider for the same task, model, starting state and success criteria. These are user-entered measurements; gateway text estimates are not billed totals.").foregroundStyle(.secondary)
             TextField("Claude alone · total tokens", text: $claude)
             TextField("Claude + Neo directly · total tokens", text: $neo)
-            TextField("Claude + OpenRagnar · total tokens", text: $gateway)
+            TextField("Claude + BrowserHelm · total tokens", text: $gateway)
             Text(valid ? "Leave unavailable totals blank. Entering zero records an actual zero." : "Enter nonnegative whole token totals, or leave the field blank.").font(.caption).foregroundStyle(valid ? Color.secondary : Color.orange)
             HStack { Button("Cancel") { dismiss() }; Spacer(); Button("Save benchmark") { store.saveBenchmark(session: session.id, claude: claude, neo: neo, gateway: gateway); if store.busy { dismiss() } }.buttonStyle(.borderedProminent).disabled(!valid) }
         }.padding(28).frame(width: 580).onAppear {

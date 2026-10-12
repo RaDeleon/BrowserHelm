@@ -1,12 +1,12 @@
 import SwiftUI
 struct SettingsView: View {
     @ObservedObject var store: Store
-    @AppStorage("openragnar.appearance") private var appearance = "system"
+    @AppStorage("browserhelm.appearance") private var appearance = "system"
     var body: some View {
         Form {
             Section("Appearance") {
                 Picker("Theme", selection: $appearance) { Text("System").tag("system"); Text("Light").tag("light"); Text("Dark").tag("dark") }
-                Text("Bronze and stone tones. System follows your Mac's appearance.").font(.caption).foregroundStyle(.secondary)
+                Text("Packet Studio graphite and cyan. System follows your Mac's appearance.").font(.caption).foregroundStyle(.secondary)
             }
             Section("Decision provider") {
                 Picker("Provider", selection: $store.config.provider) { ForEach(providers, id: \.self) { Text(names[$0]!).tag($0) } }
@@ -29,7 +29,7 @@ struct SettingsView: View {
             VisionSettingsSection(store: store)
             Section("Browser execution") {
                 Toggle("Delegate routine browser steps", isOn: $store.config.delegationEnabled)
-                Text("On: Ragnar runs bounded plans, using the selected decision and vision providers when needed. Off: Claude/Codex performs browser steps through direct tools; compact results remain enabled. Save, then reconnect to refresh available tools.").font(.caption).foregroundStyle(.secondary)
+                Text("On: BrowserHelm runs bounded plans, using the selected decision and vision providers when needed. Off: Claude/Codex performs browser steps through direct tools; compact results remain enabled. Save, then reconnect to refresh available tools.").font(.caption).foregroundStyle(.secondary)
                 Toggle("Ask agent to mark tasks", isOn: $store.config.agentTaskMarkers)
                 Text("Optional start/finish tracking adds two agent calls per task. Off by default; manual Tasks controls still work. Save and reconnect to apply the agent guidance.").font(.caption).foregroundStyle(.secondary)
                 Text("Keep complex reasoning and recovery with the main model. Delegation is experimental: compare verified completion, total time and total cost before choosing a mode.").font(.caption).foregroundStyle(.secondary)
@@ -40,9 +40,14 @@ struct SettingsView: View {
                 Stepper("Result budget: ~\(store.config.maxOutputTokens) tokens", value: $store.config.maxOutputTokens, in: 200...10000, step: 200)
                 Text("The result budget is a byte estimate, not provider billing. The full tool catalog is enabled by default. Complete omitted output stays available locally. BrowserOS Neo must remain running.").font(.caption).foregroundStyle(.secondary)
             }
+            Section("MCP clients") {
+                ClientConnectionActions(store: store, client: "Claude Desktop")
+                ClientConnectionActions(store: store, client: "Codex")
+                Text("Connect or remove BrowserHelm’s MCP entry. Restart the client after changing a connection; existing sessions keep their tools until restarted.").font(.caption).foregroundStyle(.secondary)
+            }
             Section("OpenViking memory") {
                 Toggle("Learn from navigation, vision and request outcomes", isOn: $store.config.memory.enabled)
-                Text("Uses your existing ~/.openviking/ovcli.conf connection and credential. Keys stay in that private file. OpenRagnar reads and writes only its own browser experience collection.").font(.caption).foregroundStyle(.secondary)
+                Text("Uses your existing ~/.openviking/ovcli.conf connection and credential. Keys stay in that private file. BrowserHelm reads and writes only its own browser experience collection.").font(.caption).foregroundStyle(.secondary)
                 Text("Recalls bounded routes and failure lessons. Two local text-verified runs can skip a provider choice, with fresh link and text checks. Direct requests retain metadata-only outcomes and private fingerprints; repeated failures return guidance. No browser write replay or model training.").font(.caption).foregroundStyle(.secondary)
                 HStack {
                     Button("Test OpenViking") { store.test("--test-memory") }

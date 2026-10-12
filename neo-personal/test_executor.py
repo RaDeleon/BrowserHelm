@@ -6,13 +6,13 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from executor import EXEC_TOOL, READ_JS, execute, read_page, validate
-from openragnar import OpenRagnarGateway
+from browserhelm import BrowserHelmGateway
 
 
 class ExecutorTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.g = OpenRagnarGateway({'provider':'ollama','providers':{'ollama':{'endpoint':'http://127.0.0.1:11434/v1','model':'fixture'}}},self.tmp.name)
+        self.g = BrowserHelmGateway({'provider':'ollama','providers':{'ollama':{'endpoint':'http://127.0.0.1:11434/v1','model':'fixture'}}},self.tmp.name)
         self.args = {'page':1,'goal':'Inspect page typography','allowedActions':['inspect','extract'],
                      'steps':[{'action':'inspect'},{'action':'extract','fields':[{'name':'heading','selector':'h1','read':'style'}]}],
                      'completion':{'selectorsPresent':['h1']}}
@@ -180,7 +180,7 @@ class ExecutorTests(unittest.TestCase):
         validate({**self.args, 'steps':[{'action':'inspect','includeStyles':True}]})
 
     def test_local_executor_help_available_before_and_after_catalog_without_upstream(self):
-        request = {'jsonrpc':'2.0','id':4,'method':'tools/call','params':{'name':'neo_help','arguments':{'topic':'openragnar_execute'}}}
+        request = {'jsonrpc':'2.0','id':4,'method':'tools/call','params':{'name':'neo_help','arguments':{'topic':'browserhelm_execute'}}}
         with patch.object(self.g, 'upstream_call') as upstream:
             for discovered in (False, True):
                 if discovered: self.g.transform({'method':'tools/list'}, {'result':{'tools':[]}})

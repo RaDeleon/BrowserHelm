@@ -10,7 +10,7 @@ import tempfile
 import urllib.parse
 from unittest.mock import patch
 from experience import ExperienceMemory
-from openragnar import OpenRagnarGateway
+from browserhelm import BrowserHelmGateway
 from version import VERSION
 
 
@@ -26,12 +26,12 @@ class ObservedLinkSelector:
 
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument('--remote', action='store_true'); args = parser.parse_args()
-    support = pathlib.Path.home()/'Library/Application Support/OpenRagnar'
+    support = pathlib.Path.home()/'Library/Application Support/BrowserHelm'
     settings = json.loads((support/'settings.json').read_text())
     owned = []
-    with tempfile.TemporaryDirectory(prefix='openragnar-learning-') as tmp:
+    with tempfile.TemporaryDirectory(prefix='browserhelm-learning-') as tmp:
         root = pathlib.Path(tmp)
-        g = OpenRagnarGateway(settings, root/'outputs')
+        g = BrowserHelmGateway(settings, root/'outputs')
         memory = ExperienceMemory({'enabled':True}, root/'experiences.sqlite')
         g.memory = memory
         selector = ObservedLinkSelector()
@@ -40,7 +40,7 @@ def main():
         reports = []
         try:
             init = g.handle({'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-11-25',
-                             'capabilities':{},'clientInfo':{'name':'OpenRagnar controlled learning validation','version':VERSION}}})
+                             'capabilities':{},'clientInfo':{'name':'BrowserHelm controlled learning validation','version':VERSION}}})
             assert 'error' not in init, init
             g.handle({'jsonrpc':'2.0','method':'notifications/initialized'})
             # No background uploads; the first recall is deliberately offline.
@@ -55,7 +55,7 @@ def main():
                                     'elapsedSeconds':report['elapsedSeconds']})
             assert [r['selectorCalls'] for r in reports] == [1,1,0], reports
             assert reports[-1]['providerCallsAvoided']==1
-            request={'jsonrpc':'2.0','method':'tools/call','params':{'name':'run','arguments':{'code':'throw new Error("OpenRagnar controlled learning failure");'}}}
+            request={'jsonrpc':'2.0','method':'tools/call','params':{'name':'run','arguments':{'code':'throw new Error("BrowserHelm controlled learning failure");'}}}
             first=g.handle({**request,'id':20}); second=g.handle({**request,'id':21})
             assert 'priorMatchingFailures' not in json.dumps(first)
             assert 'priorMatchingFailures' in json.dumps(second), second
@@ -67,7 +67,7 @@ def main():
                 # Controlled task evidence must not enter production reuse or hint selection.
                 with memory.db() as db: db.execute('DELETE FROM experiences')
                 report={**report,'provider':'validation (deterministic; no LLM)'}
-                assert memory.capture(task['startUrl'],'OpenRagnar 0.4.2 controlled learning validation',task['successText'],report,
+                assert memory.capture(task['startUrl'],'BrowserHelm 0.4.2 controlled learning validation',task['successText'],report,
                                       [{'from':task['startUrl'],'to':'https://docs.typesafe.ai/api','label':'API reference'}],test=True)=='queued'
                 memory.test(); memory.sync(limit=1)
                 with memory.db() as db: identifier,raw,synced=db.execute('SELECT id,document,synced FROM experiences').fetchone()
