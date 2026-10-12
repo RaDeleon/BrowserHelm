@@ -1,6 +1,6 @@
 # Source publication review
 
-The product is **BrowserHelm**. The default-branch README must be updated with the renamed source before sharing it publicly. Current source/app version is 0.5.1; the earlier published preview is OpenRagnar 0.4.3. A new release requires the separately documented tag/build/publish workflow.
+The product and default-branch README use **BrowserHelm**. Source/app version 0.5.1 supersedes the earlier OpenRagnar previews. Match each download to its release tag, checksum and source commit. New releases use the separately documented tag/build/publish workflow.
 
 ## Included folders
 
