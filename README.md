@@ -1,6 +1,40 @@
-# BrowserHelm
+<p align="center">
+  <img src="mac-app/Artwork/AppIcon.png" width="112" alt="BrowserHelm browser routing icon">
+</p>
 
-**A native macOS MCP gateway for browser agents, with compact tool output, configurable decision providers, experience memory and usage telemetry.**
+<h1 align="center">BrowserHelm</h1>
+
+<p align="center"><strong>A native macOS MCP gateway for browser agents.</strong><br>Compact browser context · Configurable models · Verified experience reuse</p>
+
+<p align="center">
+  <a href="https://github.com/RaDeleon/BrowserHelm/releases/latest"><img src="https://img.shields.io/github/v/release/RaDeleon/BrowserHelm?style=flat-square&amp;color=22d3ee&amp;label=release&amp;sort=semver" alt="Latest BrowserHelm release"></a>
+  <a href="https://github.com/RaDeleon/BrowserHelm/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/RaDeleon/BrowserHelm/ci.yml?branch=main&amp;style=flat-square&amp;label=CI" alt="Main branch CI status"></a>
+  <a href="https://github.com/RaDeleon/BrowserHelm/releases"><img src="https://img.shields.io/github/downloads/RaDeleon/BrowserHelm/total?style=flat-square&amp;color=22d3ee" alt="GitHub release downloads"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/RaDeleon/BrowserHelm?style=flat-square&amp;color=22d3ee" alt="Apache 2.0 license"></a>
+  <a href="https://github.com/RaDeleon/BrowserHelm/stargazers"><img src="https://img.shields.io/github/stars/RaDeleon/BrowserHelm?style=flat-square&amp;color=22d3ee" alt="GitHub stars"></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/macOS-14%2B-111827?style=for-the-badge&amp;logo=apple&amp;logoColor=white" alt="macOS 14 or newer">
+  <img src="https://img.shields.io/badge/Apple_Silicon-arm64-111827?style=for-the-badge&amp;logo=apple&amp;logoColor=white" alt="Apple Silicon arm64">
+  <img src="https://img.shields.io/badge/UI-SwiftUI-F54A2A?style=for-the-badge&amp;logo=swift&amp;logoColor=white" alt="Native SwiftUI interface">
+  <img src="https://img.shields.io/badge/Protocol-MCP-111827?style=for-the-badge" alt="Model Context Protocol">
+</p>
+
+<p align="center">
+  <a href="https://github.com/RaDeleon/BrowserHelm/releases/latest"><strong>Download the latest release</strong></a> ·
+  <a href="README-BrowserHelm.md">Setup guide</a> ·
+  <a href="docs/benchmarks.md">Benchmarks</a> ·
+  <a href="https://github.com/RaDeleon/BrowserHelm/releases">All releases</a>
+</p>
+
+### Built with
+
+[![Swift, Python, SQLite, Bash and GitHub Actions](https://skillicons.dev/icons?i=swift,python,sqlite,bash,githubactions&theme=dark)](#source-map)
+
+**Swift + SwiftUI / Swift Package Manager** for the native app, **Python** for the MCP engine, **SQLite** for local telemetry and experience evidence, and **shell + GitHub Actions** for building and distributing DMGs. BrowserOS Neo supplies external browser execution; OpenViking and model providers are optional integrations.
+
+---
 
 BrowserHelm connects an MCP client such as Claude Desktop or Codex to a separately running [BrowserOS Neo](https://github.com/browseros-ai/BrowserOS) instance. Neo executes browser actions. BrowserHelm controls how much browser context comes back and can delegate bounded navigation to Jev or another configured model.
 
@@ -10,7 +44,7 @@ New: [`browserhelm_execute`](docs/delegated-executor.md) accepts one bounded rea
 
 **Settings → Browser execution → Delegate routine browser steps** lets you compare delegation with main-agent browser control while keeping compact forwarding. Save and reconnect after switching. See the [comparison procedure](docs/benchmarks.md#delegation-onoff-comparison); delegation remains optional pending matched quality, speed and total-cost evidence.
 
-Download preview DMGs from [GitHub Releases](https://github.com/RaDeleon/BrowserHelm/releases). This source version corresponds to **BrowserHelm 0.5.1** and the `BrowserHelm-0.5.1-arm64.dmg` asset. Older OpenRagnar previews remain available as historical builds. Release assets include a SHA-256 checksum, packaging verification report and source commit. Version tags trigger a tested Apple Silicon build and attach the DMG automatically. These previews are ad-hoc signed and not notarized; see the [setup guide](README-BrowserHelm.md) for macOS installation.
+Download the current DMG from the [latest release](https://github.com/RaDeleon/BrowserHelm/releases/latest), or browse [all releases](https://github.com/RaDeleon/BrowserHelm/releases). This source version corresponds to **BrowserHelm 0.5.1** and the `BrowserHelm-0.5.1-arm64.dmg` asset. Older OpenRagnar previews remain available as historical builds. Release assets include a SHA-256 checksum, packaging verification report and source commit. Version tags trigger a tested Apple Silicon build and attach the DMG automatically. These previews are ad-hoc signed and not notarized; see the [setup guide](README-BrowserHelm.md) for macOS installation.
 
 Latest results: the [0.4.12 optimization retest](#measured-results-0412) compares 18 tasks after fixes to task-marker overhead, executor arguments/help and oversized inspection. Task markers are now opt-in in Settings. The original [18-task pilot](docs/validation/2026-10-11-six-case-pilot.md) remains available for comparison.
 
@@ -301,3 +335,9 @@ Original BrowserHelm code is [Apache-2.0](LICENSE). Dependencies retain their ow
 ### Remove a client connection
 
 In **Settings → MCP clients** or **Connectors**, choose **Remove from Claude Desktop** or **Remove from Codex** and confirm. Only BrowserHelm’s matching MCP entry is removed, with a private backup; other connectors and app data remain. Finish active browser work first. Restart the client to unload its cached tools. Use Connect to add the entry again.
+
+## Repository activity
+
+[![BrowserHelm repository statistics](https://github-readme-stats.vercel.app/api/pin/?username=RaDeleon&repo=BrowserHelm&theme=github_dark&hide_border=true)](https://github.com/RaDeleon/BrowserHelm)
+
+<sub>Release and CI badges use live repository metadata. GitHub Readme Stats cards are cached and may lag. Badge styling: <a href="https://shields.io/">Shields.io</a> and <a href="https://github.com/Ileriayo/markdown-badges">Markdown Badges</a>; technology icons: <a href="https://skillicons.dev/">Skill Icons</a>; repository card: <a href="https://github.com/anuraghazra/github-readme-stats">GitHub Readme Stats</a>.</sub>
