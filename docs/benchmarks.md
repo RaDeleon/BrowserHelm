@@ -33,7 +33,7 @@ Run from the root after building, with Neo running. Checks use your saved settin
 | `python3 neo-personal/check_claude_handshake.py` | Packaged MCP initialization and catalog. No decision-provider call. |
 | `python3 neo-personal/live_delegation_modes.py` | Packaged gateway with isolated settings, owned synthetic DOM and no inference. Checks direct reads with delegation off, executor reads with it on, and cached-call rejection after opt-out. Closes its owned tabs. |
 | `python3 neo-personal/live_full_access.py` | Opens an owned example.com tab, creates/fills/reads test DOM, checks output recovery and closes that tab. No decision-provider call. |
-| `python3 neo-personal/live_openragnar.py` | Defaults to `/Applications/OpenRagnar.app`, matching the installed Keychain identity. Override with `--app dist/OpenRagnar.app`. Public documentation navigation using your configured provider/key/server. Can incur provider charges; returns failure if completion is unverified. Leaves the owned tab for inspection. |
+| `python3 neo-personal/live_browserhelm.py` | Defaults to `/Applications/BrowserHelm.app`, matching the installed Keychain identity. Override with `--app dist/BrowserHelm.app`. Public documentation navigation using your configured provider/key/server. Can incur provider charges; returns failure if completion is unverified. Leaves the owned tab for inspection. |
 | `python3 neo-personal/live_memory.py` | Deterministic public-documentation route, verified text, upload and remote recall with an empty local cache. No decision-model call; memory embedding costs may apply. Closes its owned tab. |
 | `python3 neo-personal/live_learning.py` | Three public-documentation navigation runs in a temporary cache. Verifies the third skips a decision request while checking the current link/text. Also exercises repeat-failure guidance with two controlled Neo errors. No decision-model call; closes its owned tabs. |
 | `python3 neo-personal/live_learning.py --remote` | Adds one explicitly test-tagged OpenViking outcome upload/readback, excluded from production hints/reuse. Memory embedding/storage costs may apply. |
@@ -48,7 +48,7 @@ Choose a public task with an independently checked postcondition. Record the tas
 
 1. Main agent alone with its usual browser mechanism.
 2. Main agent with Neo directly.
-3. Main agent with OpenRagnar and the same Neo backend.
+3. Main agent with BrowserHelm and the same Neo backend.
 
 Use fresh chats and equivalent tool exposure. Repeat with varied order, accounting for warm caches, page changes and history. Capture completion, failures/escalations, latency, client-reported main-agent usage, gateway text bytes and decision-provider usage. Keep failed runs in the results.
 
@@ -84,7 +84,7 @@ Keep compact-catalog settings identical. Never expose both Neo and Ragnar in the
 Start with three public read-only workloads:
 
 1. **Navigation/extraction:** From `https://docs.typesafe.ai/models`, find the API reference, report the first heading and the explanation of the probabilities field. Independently verify the destination, heading and quoted field text.
-2. **DOM inspection:** On the same page, report the first heading's computed font family, size, weight and color; report the first navigation link's style. Report a deliberately absent selector (`[data-openragnar-benchmark-missing]`) as missing. Independently check against current DOM values. This tests whether the main agent avoids unnecessary decision/vision inference.
+2. **DOM inspection:** On the same page, report the first heading's computed font family, size, weight and color; report the first navigation link's style. Report a deliberately absent selector (`[data-browserhelm-benchmark-missing]`) as missing. Independently check against current DOM values. This tests whether the main agent avoids unnecessary decision/vision inference.
 3. **Judgment-heavy reading:** Compare two documented API/model choices and explain which fits a specified use case, with links to supporting text. Check the interpretation independently. Ragnar can gather evidence; the main model must make the recommendation. This tests whether delegation loses context or adds recovery work.
 
 Use at least five varied-order attempts per workload/mode for an exploratory result; ten or more are preferable before broader claims. Run equivalent first-state conditions and include every failure, recovery, escalation and human wait. Report success/accuracy first, followed by median/tail verified-completion time, main-agent turns and reported usage, decision/vision usage, memory costs and total cost per successful task. If Claude Desktop does not expose exact usage, mark it unknown; do not translate gateway bytes into subscription savings.

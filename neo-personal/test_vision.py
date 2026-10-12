@@ -6,7 +6,7 @@ import tempfile
 import unittest
 import zlib
 from unittest.mock import patch
-from openragnar import OpenRagnarGateway
+from browserhelm import BrowserHelmGateway
 from experience import ExperienceMemory
 from vision import VisionProvider, local_endpoint, png_size, target_pixels, visual_act, DEFAULT_VISION
 
@@ -69,7 +69,7 @@ class VisionTests(unittest.TestCase):
 class VisualActionTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.g = OpenRagnarGateway({'vision': {**DEFAULT_VISION, 'enabled': True}}, self.temp.name)
+        self.g = BrowserHelmGateway({'vision': {**DEFAULT_VISION, 'enabled': True}}, self.temp.name)
         self.viewport = {'url': 'https://example.com', 'width': 1000, 'height': 800, 'scrollX': 0, 'scrollY': 0, 'scale': 1, 'offsetX': 0, 'offsetY': 0, 'layout': 123}
         self.screen = {'result': {'content': [{'type': 'image', 'mimeType': 'image/png', 'data': IMAGE}]}}
         self.point = {'found': True, 'x': 400, 'y': 500, 'imageWidth': 1000, 'imageHeight': 800, 'usage': {'prompt_tokens': 123, 'completion_tokens': 12}}
@@ -144,7 +144,7 @@ class VisualActionTests(unittest.TestCase):
             self.g.settings['vision']['enabled'] = enabled
             response = self.g.transform({'method': 'tools/list'}, {'result': {'tools': []}})
             names = [t['name'] for t in response['result']['tools']]
-            self.assertEqual('openragnar_visual_act' in names, enabled)
+            self.assertEqual('browserhelm_visual_act' in names, enabled)
         with patch.object(self.g, 'run_browser') as run, self.assertRaises(ValueError): visual_act(self.g, self.args, 1)
         run.assert_not_called()
 

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 import urllib.error
 from unittest.mock import patch
-from openragnar import OpenRagnarGateway
+from browserhelm import BrowserHelmGateway
 from vision import VisionProvider, OPENROUTER_ENDPOINT
 import test_vision
 from test_vision import IMAGE
@@ -81,7 +81,7 @@ class CloudVisionTests(unittest.TestCase):
 
     def test_saved_switch_refreshes_existing_session_and_keeps_decision_key(self):
         with tempfile.TemporaryDirectory() as folder:
-            gateway = OpenRagnarGateway({'provider': 'typesafe', 'vision': CONFIG}, folder, 'fake-jev')
+            gateway = BrowserHelmGateway({'provider': 'typesafe', 'vision': CONFIG}, folder, 'fake-jev')
             path = pathlib.Path(folder) / 'settings.json'; gateway.settings_path = path
             try:
                 path.write_text(json.dumps({'vision': CONFIG}))

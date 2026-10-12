@@ -23,7 +23,7 @@ import OSLog
         timer = Timer.scheduledTimer(withTimeInterval: 6, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refreshDashboard() }
         }
-        logger.info("OpenRagnar dashboard opened")
+        logger.info("BrowserHelm dashboard opened")
     }
     func refreshDashboard() {
         guard !loadingDashboard else { return }
@@ -123,14 +123,14 @@ import OSLog
         // JSON strings share TOML basic-string escaping for file paths.
         let quoted = String(data: try! JSONSerialization.data(withJSONObject: [path]), encoding: .utf8)!
         let command = String(quoted.dropFirst().dropLast())
-        let config = "[mcp_servers.openragnar]\ncommand = \(command)\nargs = [\"--mcp\"]\n"
+        let config = "[mcp_servers.browserhelm]\ncommand = \(command)\nargs = [\"--mcp\"]\n"
         NSPasteboard.general.clearContents(); NSPasteboard.general.setString(config, forType: .string)
         status = "Codex MCP entry copied. Merge it into ~/.codex/config.toml, then restart Codex to load the tools."
     }
     func connectCodex() {
         guard !busy else { return }
         let command = Bundle.main.executableURL!.path
-        busy = true; status = "Adding OpenRagnar to Codex…"
+        busy = true; status = "Adding BrowserHelm to Codex…"
         DispatchQueue.global().async {
             let result: String
             do { result = try Runner.test("--connect-codex", extra: [command]) }
@@ -140,34 +140,30 @@ import OSLog
             }
         }
     }
+    func disconnectClient(_ client: String) {
+        guard !busy else { return }
+        busy = true; status = "Removing BrowserHelm from \(client)…"
+        let command = Bundle.main.executableURL!.path
+        let mode = client == "Codex" ? "--disconnect-codex" : "--disconnect-claude"
+        DispatchQueue.global().async {
+            let result: String
+            do { result = try Runner.test(mode, extra: [command]) }
+            catch { result = error.localizedDescription }
+            DispatchQueue.main.async { self.busy = false; self.status = result; self.refreshDashboard() }
+        }
+    }
     func copyMCP() {
-        do { let data = try JSONSerialization.data(withJSONObject: ["mcpServers": ["openragnar": mcpEntry]], options: [.prettyPrinted, .sortedKeys]); NSPasteboard.general.clearContents(); NSPasteboard.general.setString(String(data: data, encoding: .utf8)!, forType: .string); status = "MCP configuration copied. Merge the openragnar entry into your client's configuration." } catch { status = error.localizedDescription }
+        do { let data = try JSONSerialization.data(withJSONObject: ["mcpServers": ["browserhelm": mcpEntry]], options: [.prettyPrinted, .sortedKeys]); NSPasteboard.general.clearContents(); NSPasteboard.general.setString(String(data: data, encoding: .utf8)!, forType: .string); status = "MCP configuration copied. Merge the browserhelm entry into your client's configuration." } catch { status = error.localizedDescription }
     }
     func connectClaude() {
-        do {
-            let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Claude/claude_desktop_config.json")
-            try FileManager.default.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
-            let existing = try? Data(contentsOf: path)
-            var root: [String: Any] = [:]
-            if let data = existing {
-                guard let parsed = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw AppError(text: "Claude configuration is not an object. No changes made.") }; root = parsed
-            }
-            guard root["mcpServers"] == nil || root["mcpServers"] is [String: Any] else { throw AppError(text: "Unexpected mcpServers format. No changes made.") }
-            var servers = root["mcpServers"] as? [String: Any] ?? [:]
-            if let old = servers["openragnar"] as? [String: Any], let command = old["command"] as? String, !command.hasSuffix("/OpenRagnar.app/Contents/MacOS/OpenRagnar") { throw AppError(text: "Another openragnar entry already exists. Use Copy MCP config to review it.") }
-            servers["openragnar"] = mcpEntry; root["mcpServers"] = servers
-            let updated = try JSONSerialization.data(withJSONObject: root, options: [.prettyPrinted, .sortedKeys])
-            if let old = existing {
-                guard try Data(contentsOf: path) == old else { throw AppError(text: "Claude configuration changed. Try again.") }
-                let backup = path.appendingPathExtension("openragnar-\(Int(Date().timeIntervalSince1970)).bak")
-                try old.write(to: backup, options: .withoutOverwriting)
-                try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: backup.path)
-            }
-            try updated.write(to: path, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: path.path)
-            logger.info("Claude Desktop MCP configuration updated")
-            refreshDashboard()
-            status = "OpenRagnar added to Claude Desktop. Existing MCP entries preserved. Quit and reopen Claude Desktop, then enable OpenRagnar's tools."
-        } catch { status = error.localizedDescription }
+        guard !busy else { return }
+        busy = true; status = "Connecting BrowserHelm to Claude Desktop…"
+        let command = Bundle.main.executableURL!.path
+        DispatchQueue.global().async {
+            let result: String
+            do { result = try Runner.test("--connect-claude", extra: [command]) }
+            catch { result = error.localizedDescription }
+            DispatchQueue.main.async { self.busy = false; self.status = result; self.refreshDashboard() }
+        }
     }
 }

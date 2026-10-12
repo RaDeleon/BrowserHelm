@@ -70,7 +70,7 @@ jobs:
           .runtime/python/bin/python3.12 -I -B -c 'import ssl, sqlite3; assert ssl.OPENSSL_VERSION'
       - name: Compile, stage and package
         env:
-          OPENRAGNAR_SIGNING_IDENTITY: '-'
+          BROWSERHELM_SIGNING_IDENTITY: '-'
         run: |
           (cd mac-app && swift build -c release --disable-sandbox)
           python3 script/stage_app.py
@@ -78,9 +78,9 @@ jobs:
       - name: Verify mounted DMG and packaged version
         run: |
           VERSION="${RELEASE_TAG#v}"
-          python3 script/verify_dmg.py "dist/OpenRagnar-$VERSION-arm64.dmg"
-          (cd dist && shasum -a 256 -c "OpenRagnar-$VERSION-arm64.dmg.sha256")
-          dist/OpenRagnar.app/Contents/Resources/runtime/bin/python3.12 -I -B -c 'import urllib.request; assert urllib.request.urlopen("https://docs.typesafe.ai", timeout=20).status == 200'
+          python3 script/verify_dmg.py "dist/BrowserHelm-$VERSION-arm64.dmg"
+          (cd dist && shasum -a 256 -c "BrowserHelm-$VERSION-arm64.dmg.sha256")
+          dist/BrowserHelm.app/Contents/Resources/runtime/bin/python3.12 -I -B -c 'import urllib.request; assert urllib.request.urlopen("https://docs.typesafe.ai", timeout=20).status == 200'
           cp "docs/release-notes/$VERSION.md" dist/RELEASE-NOTES.md
           git rev-parse HEAD > dist/SOURCE-COMMIT.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -113,11 +113,11 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           VERSION="${RELEASE_TAG#v}"
-          (cd dist && sha256sum -c "OpenRagnar-$VERSION-arm64.dmg.sha256")
+          (cd dist && sha256sum -c "BrowserHelm-$VERSION-arm64.dmg.sha256")
           if gh release view "$RELEASE_TAG" --json isDraft > "$RUNNER_TEMP/release.json" 2>/dev/null; then
             python3 -c 'import json,sys; assert json.load(open(sys.argv[1]))["isDraft"], "Release is already published; use a new version tag"' "$RUNNER_TEMP/release.json"
           else
-            gh release create "$RELEASE_TAG" --verify-tag --draft --prerelease --title "OpenRagnar $VERSION (preview)" --notes-file dist/RELEASE-NOTES.md
+            gh release create "$RELEASE_TAG" --verify-tag --draft --prerelease --title "BrowserHelm $VERSION (preview)" --notes-file dist/RELEASE-NOTES.md
           fi
-          gh release upload "$RELEASE_TAG" "dist/OpenRagnar-$VERSION-arm64.dmg" "dist/OpenRagnar-$VERSION-arm64.dmg.sha256" "dist/OpenRagnar-$VERSION-arm64.verification.json" dist/SOURCE-COMMIT.txt --clobber
+          gh release upload "$RELEASE_TAG" "dist/BrowserHelm-$VERSION-arm64.dmg" "dist/BrowserHelm-$VERSION-arm64.dmg.sha256" "dist/BrowserHelm-$VERSION-arm64.verification.json" dist/SOURCE-COMMIT.txt --clobber
           gh release edit "$RELEASE_TAG" --draft=false --prerelease --latest=false

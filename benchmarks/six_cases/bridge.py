@@ -1,22 +1,22 @@
 """Isolated stdio MCP capture bridge for matched Claude browser tests."""
 import json,os,pathlib,subprocess,sys,time,urllib.request
 ROOT=pathlib.Path(__file__).resolve().parents[2]
-ENGINE=ROOT/'dist/OpenRagnar.app/Contents/Resources/engine'
+ENGINE=ROOT/'dist/BrowserHelm.app/Contents/Resources/engine'
 sys.path.insert(0,str(ENGINE))
 from gateway import Gateway,encode,rpc_result,tool_result
-from openragnar import OpenRagnarGateway
+from browserhelm import BrowserHelmGateway
 from experience import ExperienceMemory
 
 COMMON={'run','evaluate','snapshot','screenshot','read','grep','name_session'}
-EXTRA={'openragnar_execute','openragnar_navigate','openragnar_visual_act','openragnar_status','openragnar_task','neo_help','neo_read_output'}
+EXTRA={'browserhelm_execute','browserhelm_navigate','browserhelm_visual_act','browserhelm_status','browserhelm_task','neo_help','neo_read_output'}
 class LocalMemory(ExperienceMemory):
  def start(self):pass
  def destination(self):return 'isolated-six-case-benchmark'
  def request(self,*args,**kwargs):raise TimeoutError('No benchmark upload or remote recall')
-class BenchmarkGateway(OpenRagnarGateway):
+class BenchmarkGateway(BrowserHelmGateway):
  def read_provider_key(self,kind):
   try:
-   r=subprocess.run(['/Applications/OpenRagnar.app/Contents/MacOS/OpenRagnar','--provider-key',kind],capture_output=True,timeout=20,check=True)
+   r=subprocess.run(['/Applications/BrowserHelm.app/Contents/MacOS/BrowserHelm','--provider-key',kind],capture_output=True,timeout=20,check=True)
    key=r.stdout.decode()
    if not key or len(key)>4096 or '\n' in key or '\r' in key:raise ValueError()
    return key

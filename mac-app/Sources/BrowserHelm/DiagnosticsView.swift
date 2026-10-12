@@ -81,7 +81,7 @@ struct DiagnosticsView: View {
                 ContentUnavailableView("Diagnostics not loaded", systemImage: "stethoscope", description: Text("Refresh to load local diagnostics from this build."))
             }
         }.padding(24).onAppear { query = store.diagnosticQuery }
-            .fileExporter(isPresented: $export, document: report, contentType: .json, defaultFilename: "OpenRagnar-diagnostics") { result in
+            .fileExporter(isPresented: $export, document: report, contentType: .json, defaultFilename: "BrowserHelm-diagnostics") { result in
                 switch result {
                 case .success: store.status = "Diagnostics report saved locally. Review it before sharing; it contains app paths, client names and timestamps."
                 case .failure: store.status = "Diagnostics report could not be saved."
@@ -111,7 +111,7 @@ struct DiagnosticsView: View {
 private struct DiagnosticDetail: View {
     var event: DiagnosticEvent
     var body: some View {
-        RagnarPanel {
+        HelmPanel {
             VStack(alignment: .leading, spacing: 8) {
                 Text(event.summary).font(.headline)
                 Text(event.advice).font(.callout)

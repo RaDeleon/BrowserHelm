@@ -16,16 +16,16 @@ struct RecentContextChart: View {
     private var points: [ContextPoint] {
         recent.enumerated().flatMap { index, request in
             [ContextPoint(id: request.id + "-raw", request: index + 1, tokens: estimate(request.upstreamInputBytes + request.upstreamText), route: "Direct Neo equivalent", tool: request.tool),
-             ContextPoint(id: request.id + "-compact", request: index + 1, tokens: estimate(request.inputBytes + request.clientText), route: "OpenRagnar", tool: request.tool)]
+             ContextPoint(id: request.id + "-compact", request: index + 1, tokens: estimate(request.inputBytes + request.clientText), route: "BrowserHelm", tool: request.tool)]
         }
     }
     var body: some View {
-        RagnarPanel {
+        HelmPanel {
             VStack(alignment: .leading, spacing: 16) {
                 SectionHeading(title: "Recent request footprint", symbol: "waveform.path", evidence: "TEXT ESTIMATE")
                 if recent.isEmpty {
                     VStack(spacing: 8) {
-                        Image(systemName: "waveform.path").font(.largeTitle).foregroundStyle(RagnarTheme.bronze)
+                        Image(systemName: "waveform.path").font(.largeTitle).foregroundStyle(HelmTheme.accent)
                         Text("Your next browser requests will appear here").font(.callout)
                         Text("Connect an MCP client and use a browser tool.").font(.caption).foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity, minHeight: 130)
@@ -33,13 +33,13 @@ struct RecentContextChart: View {
                     Chart(points) { point in
                         LineMark(x: .value("Request", point.request), y: .value("Text token equivalents", point.tokens))
                             .foregroundStyle(by: .value("Route", point.route))
-                            .lineStyle(StrokeStyle(lineWidth: point.route == "OpenRagnar" ? 2.5 : 1.5))
+                            .lineStyle(StrokeStyle(lineWidth: point.route == "BrowserHelm" ? 2.5 : 1.5))
                             .symbol(by: .value("Route", point.route))
                             .symbolSize(recent.count < 5 ? 24 : 0)
                             .accessibilityLabel("Request \(point.request), \(point.tool), \(point.route)")
                             .accessibilityValue("Approximately \(point.tokens) text token equivalents")
                     }
-                    .chartForegroundStyleScale(["Direct Neo equivalent": RagnarTheme.ink, "OpenRagnar": RagnarTheme.bronze])
+                    .chartForegroundStyleScale(["Direct Neo equivalent": HelmTheme.ink, "BrowserHelm": HelmTheme.accent])
                     .chartXAxis(.hidden)
                     .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) }
                     .chartYScale(domain: 0...max(1, points.map(\.tokens).max() ?? 1))

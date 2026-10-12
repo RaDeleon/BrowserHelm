@@ -2,10 +2,10 @@
 import argparse,datetime,http.server,json,os,pathlib,re,sqlite3,statistics,subprocess,sys,threading,time,uuid
 from scenarios import CASES,page,verify
 ROOT=pathlib.Path(__file__).resolve().parents[2]
-ENGINE=ROOT/'dist/OpenRagnar.app/Contents/Resources/engine';sys.path.insert(0,str(ENGINE))
-from openragnar import OpenRagnarGateway
+ENGINE=ROOT/'dist/BrowserHelm.app/Contents/Resources/engine';sys.path.insert(0,str(ENGINE))
+from browserhelm import BrowserHelmGateway
 from version import VERSION
-PYTHON=ROOT/'dist/OpenRagnar.app/Contents/Resources/runtime/bin/python3.12'
+PYTHON=ROOT/'dist/BrowserHelm.app/Contents/Resources/runtime/bin/python3.12'
 STATES={};LOCK=threading.Lock()
 class Fixture(http.server.BaseHTTPRequestHandler):
  def log_message(self,*args):pass
@@ -44,11 +44,11 @@ def summaries(rows):
 def main():
  ap=argparse.ArgumentParser();ap.add_argument('--repeats',type=int,default=1);ap.add_argument('--cases',default='all');ap.add_argument('--modes',default='neo,off,on');ap.add_argument('--model',default='claude-opus-5-5');ap.add_argument('--timeout',type=int,default=180);ap.add_argument('--api-equivalent-cap',type=float,default=10);ap.add_argument('--vision',choices=['local','saved'],default='local');ap.add_argument('--output',type=pathlib.Path);args=ap.parse_args()
  output=args.output or ROOT/'dist/benchmarks'/datetime.datetime.now().strftime('%Y%m%d-%H%M%S');output=output.resolve();output.mkdir(parents=True,exist_ok=True)
- settings=json.loads((pathlib.Path.home()/'Library/Application Support/OpenRagnar/settings.json').read_text())
+ settings=json.loads((pathlib.Path.home()/'Library/Application Support/BrowserHelm/settings.json').read_text())
  settings.update(compactCatalog=False,configVersion=3);settings['memory']={'enabled':False}
  if args.vision=='local':settings['vision']={'enabled':True,'provider':'ollama','endpoint':'http://127.0.0.1:11434','model':'qwen3-vl:2b-instruct'}
  server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Fixture);threading.Thread(target=server.serve_forever,daemon=True).start()
- admin=OpenRagnarGateway({'provider':'none','upstream':settings['upstream'],'delegationEnabled':False},output/'verification-outputs')
+ admin=BrowserHelmGateway({'provider':'none','upstream':settings['upstream'],'delegationEnabled':False},output/'verification-outputs')
  admin.handle({'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'Six-case benchmark verification','version':'1'}}});admin.upstream_call({'jsonrpc':'2.0','method':'notifications/initialized'})
  rows=[];spent=0.;stop=False;fixture_owned=[]
  selected=[c for c in CASES if args.cases=='all' or c['id'] in args.cases.split(',')]
@@ -85,8 +85,8 @@ def main():
      (work/'bridge.json').write_text(json.dumps(bridge))
      mcp={'mcpServers':{'browser':{'type':'stdio','command':str(PYTHON),'args':['-I','-B',str(ROOT/'benchmarks/six_cases/bridge.py'),str(work/'bridge.json')]}}};(work/'mcp.json').write_text(json.dumps(mcp))
      prompt=case['task']+('\nYour owned fixture is page %s, URL %s. Use this page, not other tabs.'%(fixture_page,fixture_url) if case['fixture'] else '\nOpen only owned tabs for this public documentation task.')+'\nUse only the provided browser MCP. Return only the requested JSON. Do not use skills/subagents or access other sites/accounts. At most 16 main-agent tool calls; stop with an honest failure if blocked. Keep complex reasoning with the main model.'
-     if mode=='on' and case['id'] in ('01_styles','02_navigation','06_learning'):prompt+='\nFor this delegation arm, use openragnar_execute for the supported bounded read-only plan. Keep interpretation and recovery with Opus.'
-     if mode=='on' and case['id']=='04_vision':prompt+='\nFor this delegation arm, use openragnar_visual_act with the selected vision provider, then verify the actual fixture outcome.'
+     if mode=='on' and case['id'] in ('01_styles','02_navigation','06_learning'):prompt+='\nFor this delegation arm, use browserhelm_execute for the supported bounded read-only plan. Keep interpretation and recovery with Opus.'
+     if mode=='on' and case['id']=='04_vision':prompt+='\nFor this delegation arm, use browserhelm_visual_act with the selected vision provider, then verify the actual fixture outcome.'
      (work/'prompt.txt').write_text(prompt)
      command=['claude','-p',prompt,'--model',args.model,'--effort','high','--restricted','--tools','','--disable-slash-commands','--setting-sources','','--strict-mcp-config','--mcp-config',str(work/'mcp.json'),'--allowedTools','mcp__browser__*','--output-format','stream-json','--verbose','--no-session-persistence','--permission-mode','dontAsk','--permission-prompts','none','--max-budget-usd','2']
      started=time.monotonic();result={};failure=None

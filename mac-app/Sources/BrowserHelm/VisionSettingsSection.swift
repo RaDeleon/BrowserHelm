@@ -26,7 +26,7 @@ struct VisionSettingsSection: View {
                     Text("Custom OpenRouter model").tag("custom")
                 }
                 if let model = preset {
-                    Label(model.purpose, systemImage: "viewfinder").foregroundStyle(RagnarTheme.bronze)
+                    Label(model.purpose, systemImage: "viewfinder").foregroundStyle(HelmTheme.accent)
                     Text(model.detail).font(.caption).foregroundStyle(.secondary)
                     HStack {
                         Text(model.id).font(.caption.monospaced()).textSelection(.enabled)
@@ -47,7 +47,7 @@ struct VisionSettingsSection: View {
                 Text("This key is shared with the OpenRouter decision provider. Jev and other providers keep their own keys.").font(.caption).foregroundStyle(.secondary)
                 Label("Screenshots and target instructions go to OpenRouter and its selected provider. Calls use your OpenRouter credit.", systemImage: "cloud")
                     .font(.caption).foregroundStyle(.secondary)
-                Text("Three recommended candidates for browser work; their accuracy and speed in OpenRagnar have not been ranked by a matched benchmark. Follow the pricing link for current rates.").font(.caption).foregroundStyle(.secondary)
+                Text("Three recommended candidates for browser work; their accuracy and speed in BrowserHelm have not been ranked by a matched benchmark. Follow the pricing link for current rates.").font(.caption).foregroundStyle(.secondary)
             } else {
                 TextField("Local API URL", text: $store.config.vision.endpoint)
                 TextField("Downloaded vision model", text: $store.config.vision.model)
@@ -57,7 +57,7 @@ struct VisionSettingsSection: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Text("Save to use this model on the next vision request. Your last model for each provider is remembered. Reconnect your MCP client after first enabling vision to expose its tool.").font(.caption).foregroundStyle(.secondary)
-            Text("The agent uses openragnar_visual_act for targets that need vision. It receives a compact point/click report. Jev remains the separate text decision provider. Verified experience reuse is scoped to the selected model; no automatic provider switch or retry.").font(.caption).foregroundStyle(.secondary)
+            Text("The agent uses browserhelm_visual_act for targets that need vision. It receives a compact point/click report. Jev remains the separate text decision provider. Verified experience reuse is scoped to the selected model; no automatic provider switch or retry.").font(.caption).foregroundStyle(.secondary)
             Button(cloud ? "Test OpenRouter vision" : "Test local vision server") { store.test("--test-vision") }
             Text("The test checks availability and capabilities without screenshots or paid inference. It does not prove click accuracy.").font(.caption).foregroundStyle(.secondary)
         }

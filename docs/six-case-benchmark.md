@@ -32,7 +32,7 @@ Memory uses a dedicated case-6 SQLite cache shared only across its fresh chats; 
 Build/stage the version under test first. The runner records its actual engine and Claude CLI versions. Run with the bundled Python:
 
 ```sh
-dist/OpenRagnar.app/Contents/Resources/runtime/bin/python3.12 -B benchmarks/six_cases/run.py --repeats 1
+dist/BrowserHelm.app/Contents/Resources/runtime/bin/python3.12 -B benchmarks/six_cases/run.py --repeats 1
 ```
 
 Use `--repeats 3` for acquisition and a third learned-repeat sample; all other cases also get three independent attempts per mode. A one-pass pilot cannot pick a reliable winner. Use `--vision local` (default) for the installed Ollama `qwen3-vl:2b-instruct`; `--vision saved` uses the user's explicit saved choice in isolated configuration. Supplement cloud vision only after verifying its key and spending limit.

@@ -4,13 +4,13 @@ import pathlib
 import tempfile
 import unittest
 from unittest.mock import patch
-from openragnar import OpenRagnarGateway
+from browserhelm import BrowserHelmGateway
 
 
 class DelegationSettingsTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.g = OpenRagnarGateway({'provider':'none','vision':{'enabled':True}}, self.temp.name)
+        self.g = BrowserHelmGateway({'provider':'none','vision':{'enabled':True}}, self.temp.name)
 
     def tearDown(self):
         self.g.moves_pool.shutdown(wait=True)
@@ -22,18 +22,18 @@ class DelegationSettingsTests(unittest.TestCase):
         return {t['name'] for t in self.g.transform({'method':'tools/list'}, response)['result']['tools']}
 
     def test_legacy_default_preserves_delegation_and_off_preserves_direct_tools(self):
-        self.assertTrue({'openragnar_execute','openragnar_navigate','openragnar_visual_act'} <= self.catalog())
+        self.assertTrue({'browserhelm_execute','browserhelm_navigate','browserhelm_visual_act'} <= self.catalog())
         self.g.settings['delegationEnabled'] = False
         tools = self.catalog()
-        self.assertTrue({'run','evaluate','screenshot','openragnar_task','openragnar_status'} <= tools)
-        self.assertFalse({'openragnar_execute','openragnar_navigate','openragnar_visual_act'} & tools)
+        self.assertTrue({'run','evaluate','screenshot','browserhelm_task','browserhelm_status'} <= tools)
+        self.assertFalse({'browserhelm_execute','browserhelm_navigate','browserhelm_visual_act'} & tools)
 
     def test_cached_delegated_calls_block_before_browser_models_or_keys(self):
         self.g.settings['delegationEnabled'] = False
-        with patch('openragnar.execute') as execute, patch.object(self.g,'navigate') as navigate, \
-             patch('openragnar.visual_act') as visual, patch.object(self.g,'upstream_call') as browser, \
+        with patch('browserhelm.execute') as execute, patch.object(self.g,'navigate') as navigate, \
+             patch('browserhelm.visual_act') as visual, patch.object(self.g,'upstream_call') as browser, \
              patch.object(self.g,'read_provider_key') as key:
-            for name in ('openragnar_execute','openragnar_navigate','openragnar_visual_act'):
+            for name in ('browserhelm_execute','browserhelm_navigate','browserhelm_visual_act'):
                 result = self.g._handle({'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':name,'arguments':{}}})
                 self.assertTrue(result['result']['isError'])
                 self.assertIn('disabled', result['result']['content'][0]['text'])
@@ -44,7 +44,7 @@ class DelegationSettingsTests(unittest.TestCase):
         self.g.settings_path = path
         for enabled in (True,False,True):
             path.write_text(json.dumps({'configVersion':3,'provider':'none','delegationEnabled':enabled,'vision':{'enabled':True}}))
-            self.assertEqual('openragnar_execute' in self.catalog(), enabled)
+            self.assertEqual('browserhelm_execute' in self.catalog(), enabled)
             self.assertEqual(self.g.delegation_enabled(), enabled)
 
     def test_bad_or_missing_saved_configuration_fails_closed(self):
@@ -54,8 +54,8 @@ class DelegationSettingsTests(unittest.TestCase):
             if contents is None:
                 path.unlink(missing_ok=True)
             else: path.write_text(contents)
-            with patch('openragnar.execute') as execute, patch.object(self.g,'upstream_call') as browser:
-                result = self.g._handle({'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'openragnar_execute','arguments':{}}})
+            with patch('browserhelm.execute') as execute, patch.object(self.g,'upstream_call') as browser:
+                result = self.g._handle({'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'browserhelm_execute','arguments':{}}})
                 self.assertTrue(result['result']['isError'])
                 execute.assert_not_called(); browser.assert_not_called()
 
@@ -63,7 +63,7 @@ class DelegationSettingsTests(unittest.TestCase):
         self.g.settings['delegationEnabled'] = False
         result = self.g.transform({'method':'initialize'},{'result':{'instructions':'Neo instructions'}})['result']
         self.assertIn('delegation is disabled', result['instructions'])
-        self.assertNotIn('Prefer openragnar_execute', result['instructions'])
+        self.assertNotIn('Prefer browserhelm_execute', result['instructions'])
 
     def test_task_markers_opt_in_without_hiding_manual_tool(self):
         for enabled in (None, True, False):
@@ -72,7 +72,7 @@ class DelegationSettingsTests(unittest.TestCase):
             instructions = self.g.transform({'method':'initialize'}, {'result':{'instructions':'Neo'}})['result']['instructions']
             self.assertEqual('For each new user prompt' in instructions, enabled is True)
             self.assertEqual('Task markers are optional' in instructions, enabled is not True)
-            self.assertIn('openragnar_task', self.catalog())
+            self.assertIn('browserhelm_task', self.catalog())
 
     def test_direct_browser_forwarding_still_available_while_off(self):
         self.g.settings['delegationEnabled'] = False

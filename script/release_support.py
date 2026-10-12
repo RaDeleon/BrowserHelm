@@ -6,6 +6,7 @@ import plistlib
 import re
 import subprocess
 import tempfile
+from artifact_policy import is_private_artifact
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 MACHO_MAGIC = {bytes.fromhex(value) for value in
@@ -83,9 +84,9 @@ def app_metadata(app):
     version = info.get('CFBundleShortVersionString', '')
     if not isinstance(version, str) or not re.fullmatch(r'\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?', version):
         raise ValueError('App has an invalid version for a DMG filename.')
-    if info.get('CFBundleIdentifier') != 'com.techinsf.openragnar' or info.get('CFBundleExecutable') != 'OpenRagnar':
-        raise ValueError('Expected the OpenRagnar app bundle.')
-    executable = app / 'Contents/MacOS/OpenRagnar'
+    if info.get('CFBundleIdentifier') != 'com.techinsf.browserhelm' or info.get('CFBundleExecutable') != 'BrowserHelm':
+        raise ValueError('Expected the BrowserHelm app bundle.')
+    executable = app / 'Contents/MacOS/BrowserHelm'
     architectures = run(['/usr/bin/lipo', '-archs', executable], capture_output=True, text=True).stdout.split()
     if set(architectures) == {'arm64'}:
         architecture = 'arm64'
@@ -98,8 +99,38 @@ def app_metadata(app):
     return {'version': version, 'architecture': architecture}
 
 
+ENGINE_FILES = {
+    'gateway.py', 'decision.py', 'vision.py', 'executor.py', 'browserhelm.py',
+    'openragnar.py', 'launch.py', 'metrics.py', 'task_metrics.py', 'client_setup.py',
+    'migration.py', 'experience.py', 'diagnostics.py', 'version.py', 'vision-models.json',
+}
+RESOURCE_ENTRIES = {'engine', 'runtime', 'README.md', 'LICENSE', 'NOTICE', 'AppIcon.icns', 'AppIcon.png'}
+
+
+def verify_distribution_contents(app):
+    """Reject development/user artifacts without reading their contents."""
+    app = pathlib.Path(app)
+    for path in app.rglob('*'):
+        relative = path.relative_to(app)
+        if (is_private_artifact(relative.as_posix()) or
+            any(part in ('test', 'tests', 'fixtures', 'benchmarks', 'design', '__pycache__', '.git') for part in relative.parts)):
+            raise ValueError('Local/test artifact is not distributable: ' + relative.as_posix())
+    contents = app / 'Contents'
+    for directory, allowed in ((app, {'Contents'}),
+                               (contents, {'MacOS', 'Resources', 'Info.plist', 'PkgInfo', '_CodeSignature'}),
+                               (contents / 'MacOS', {'BrowserHelm'}),
+                               (contents / 'Resources', RESOURCE_ENTRIES),
+                               (contents / 'Resources/engine', ENGINE_FILES)):
+        if not directory.is_dir():
+            raise ValueError('Missing distribution directory: ' + str(directory.relative_to(app)))
+        for child in directory.iterdir():
+            if child.name not in allowed:
+                raise ValueError('Unexpected distribution entry: ' + child.relative_to(app).as_posix())
+
+
 def verify_app(app, release=False):
     app = pathlib.Path(app)
+    verify_distribution_contents(app)
     metadata = app_metadata(app)
     run(['/usr/bin/codesign', '--verify', '--deep', '--strict', app], capture_output=True, text=True)
     resources = app / 'Contents/Resources'
@@ -120,7 +151,7 @@ def verify_app(app, release=False):
 
 @contextlib.contextmanager
 def mounted_dmg(dmg):
-    with tempfile.TemporaryDirectory(prefix='openragnar-mount-', dir='/private/tmp') as mount:
+    with tempfile.TemporaryDirectory(prefix='browserhelm-mount-', dir='/private/tmp') as mount:
         run(['/usr/bin/hdiutil', 'attach', '-readonly', '-nobrowse', '-quiet', '-mountpoint', mount, dmg])
         try:
             yield pathlib.Path(mount)

@@ -20,7 +20,7 @@ def totals(rows):
                       'summedElapsedSeconds':round(sum(r['elapsedSeconds'] for r in group),3),
                       'mainAgentTurns':None if any(r.get('mainAgentTurns') is None for r in group) else sum(r['mainAgentTurns'] for r in group),
                       'toolCalls':sum(r['mainAgentToolCalls'] for r in group),
-                      'taskMarkerCalls':sum(sum('openragnar_task' in t for t in r['toolNames']) for r in group),
+                      'taskMarkerCalls':sum(sum('browserhelm_task' in t for t in r['toolNames']) for r in group),
                       'toolErrors':sum(r['transportErrors'] for r in group),
                       'knownApiEquivalentUSD':sum(r.get('apiEquivalentUSD') or 0 for r in group),
                       'unknownCostAttempts':sum(r.get('apiEquivalentUSD') is None for r in group),
@@ -41,7 +41,7 @@ def main():
              'knownApiEquivalentUSD':sum(r.get('apiEquivalentUSD') or 0 for r in rows),
              'totalTaskCostUSD':None,'subscriptionAllowanceImpact':None,
              'sources':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in [args.baseline,*args.bundles]}}
-    lines=['# Six-case optimization retest — OpenRagnar '+', '.join(versions),'',
+    lines=['# Six-case optimization retest — BrowserHelm '+', '.join(versions),'',
            f"**{sum(r['verified'] for r in rows)}/{len(rows)} independently verified attempts.** One attempt per case/mode; no additional repeats.",'',
            'Same Opus 5.5 High model, Claude Code 2.1.296, Neo backend and task-specific tool exposure as the original pilot. Isolated fixtures/settings, local Ollama Qwen3-VL 2B for delegated vision, Jev for inferred navigation. Production memory and provider choices are preserved. The runner captures actual versions. Task markers default off in the optimized app.','',
            '| Case | Neo now | Ragnar off now | Ragnar on now | Ragnar on before |',

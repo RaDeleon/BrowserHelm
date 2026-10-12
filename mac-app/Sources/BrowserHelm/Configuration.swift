@@ -1,6 +1,25 @@
 import Foundation
-let service = "com.techinsf.openragnar"
-let support = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/OpenRagnar")
+let service = "com.techinsf.browserhelm"
+// Keep the credential service stable across the rename. Keys never leave Keychain.
+let keychainService = "com.techinsf.openragnar"
+let support: URL = {
+    let base = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
+    let target = base.appendingPathComponent("BrowserHelm")
+    let legacy = base.appendingPathComponent("OpenRagnar")
+    let fm = FileManager.default
+    if fm.fileExists(atPath: legacy.path) && !fm.fileExists(atPath: target.path) {
+        let resources = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources")
+        let process = Process()
+        process.executableURL = resources.appendingPathComponent("runtime/bin/python3.12")
+        process.arguments = ["-I", "-B", resources.appendingPathComponent("engine/migration.py").path, "--support", legacy.path, target.path]
+        process.standardOutput = FileHandle.nullDevice
+        do {
+            try process.run(); process.waitUntilExit()
+            if process.terminationStatus != 0 { return legacy }
+        } catch { return legacy }
+    }
+    return target
+}()
 let settingsURL = support.appendingPathComponent("settings.json")
 let providers = ["none", "typesafe", "openrouter", "ollama", "lmstudio", "custom"]
 let names = ["none": "Gateway only", "typesafe": "TypeSafe AI / Jev", "openrouter": "OpenRouter", "ollama": "Ollama", "lmstudio": "LM Studio", "custom": "Custom OpenAI-compatible"]

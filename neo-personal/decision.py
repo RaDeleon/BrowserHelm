@@ -36,9 +36,9 @@ class DecisionProvider:
             raise ValueError("Select a supported decision provider")
         self.kind, self.endpoint, self.model, self.api_key = kind, validate_endpoint(endpoint), model.strip(), api_key
         if not self.model:
-            raise ValueError("Enter the model ID in OpenRagnar Settings")
+            raise ValueError("Enter the model ID in BrowserHelm Settings")
         if kind in ("typesafe", "openrouter") and not api_key:
-            raise ValueError("Save this provider's API key in OpenRagnar Settings")
+            raise ValueError("Save this provider's API key in BrowserHelm Settings")
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
 
     def post(self, path, payload):

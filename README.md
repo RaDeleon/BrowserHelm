@@ -1,30 +1,32 @@
-# OpenRagnar
+# BrowserHelm
 
 **A native macOS MCP gateway for browser agents, with compact tool output, configurable decision providers, experience memory and usage telemetry.**
 
-OpenRagnar connects an MCP client such as Claude Desktop or Codex to a separately running [BrowserOS Neo](https://github.com/browseros-ai/BrowserOS) instance. Neo executes browser actions. OpenRagnar controls how much browser context comes back and can delegate bounded navigation to Jev or another configured model.
+BrowserHelm connects an MCP client such as Claude Desktop or Codex to a separately running [BrowserOS Neo](https://github.com/browseros-ai/BrowserOS) instance. Neo executes browser actions. BrowserHelm controls how much browser context comes back and can delegate bounded navigation to Jev or another configured model.
 
-The locally tested **0.4.12** build targets Apple Silicon Macs running macOS 14+. This is an experimental portfolio project. Preview DMGs are ad-hoc signed, not notarized. Neo is required and is not bundled.
+The current **BrowserHelm 0.5.1** source and locally validated app target Apple Silicon Macs running macOS 14+. This is an experimental portfolio project. Preview DMGs are ad-hoc signed, not notarized. Neo is required and is not bundled.
 
-New: [`openragnar_execute`](docs/delegated-executor.md) accepts one bounded read-only browser plan, batches inspection/extraction, uses the configured decision provider for observed links and optionally locates visual targets. It returns explicit completion checks or partial progress with escalation. This reduces main-agent round trips for supported plans; general 10× speed and total-cost savings remain unproven.
+New: [`browserhelm_execute`](docs/delegated-executor.md) accepts one bounded read-only browser plan, batches inspection/extraction, uses the configured decision provider for observed links and optionally locates visual targets. It returns explicit completion checks or partial progress with escalation. This reduces main-agent round trips for supported plans; general 10× speed and total-cost savings remain unproven.
 
 **Settings → Browser execution → Delegate routine browser steps** lets you compare delegation with main-agent browser control while keeping compact forwarding. Save and reconnect after switching. See the [comparison procedure](docs/benchmarks.md#delegation-onoff-comparison); delegation remains optional pending matched quality, speed and total-cost evidence.
 
-Download the DMG from [GitHub Releases](https://github.com/RaDeleon/OpenRagnar/releases). While this repository is private, downloads require repository access. Each release includes a SHA-256 checksum and a packaging verification report. Version tags trigger a tested Apple Silicon build and attach the DMG automatically.
+Download published previews from [GitHub Releases](https://github.com/RaDeleon/BrowserHelm/releases). **The latest published preview is OpenRagnar 0.4.3; BrowserHelm 0.5.1 is currently validated locally and has not been released.** Build from source below to use the renamed app until a BrowserHelm release is published. Private repository downloads require repository access. Release assets include a SHA-256 checksum and a packaging verification report; version tags trigger a tested Apple Silicon build and attach the DMG automatically.
 
 Latest results: the [0.4.12 optimization retest](#measured-results-0412) compares 18 tasks after fixes to task-marker overhead, executor arguments/help and oversized inspection. Task markers are now opt-in in Settings. The original [18-task pilot](docs/validation/2026-10-11-six-case-pilot.md) remains available for comparison.
 
 ## Requirements
 
-**OpenRagnar is macOS-only right now.** The current app and DMG support **Apple Silicon Macs running macOS 14 or later**. Windows, Linux and Intel Macs are not supported by the current release.
+BrowserHelm replaces OpenRagnar in version 0.5.0. See the [migration guide](docs/browserhelm-migration.md).
+
+**BrowserHelm is macOS-only right now.** The current app and DMG support **Apple Silicon Macs running macOS 14 or later**. Windows, Linux and Intel Macs are not supported by the current release.
 
 | To run the app | Requirement |
 | --- | --- |
 | Operating system | macOS 14 (Sonoma) or later. |
 | Hardware | An Apple Silicon Mac (M-series chip). |
-| Browser backend | BrowserOS Neo installed separately and running on the same Mac. It is not bundled with OpenRagnar. |
+| Browser backend | BrowserOS Neo installed separately and running on the same Mac. It is not bundled with BrowserHelm. |
 | AI client | Claude Desktop, Codex, or another MCP client that can launch a local stdio server. |
-| Installation | Install `OpenRagnar.app` in `/Applications`, then configure and reconnect your MCP client. |
+| Installation | Install `BrowserHelm.app` in `/Applications`, then configure and reconnect your MCP client. |
 
 The packaged app includes its Python runtime. **You do not need to install Python or Xcode to run the DMG build.**
 
@@ -42,7 +44,7 @@ Additional services are optional and depend on which features you use:
 
 ## Why build this?
 
-Browser agents can repeatedly send large tool catalogs, page snapshots and duplicate results to the main model. OpenRagnar explores reducing that overhead while preserving access to complete browser output and making the execution path observable.
+Browser agents can repeatedly send large tool catalogs, page snapshots and duplicate results to the main model. BrowserHelm explores reducing that overhead while preserving access to complete browser output and making the execution path observable.
 
 The engineering work includes MCP negotiation, context compaction and recovery, provider adapters, locally verified navigation, durable memory uploads, concurrent telemetry, macOS Keychain integration and app packaging. Payload reductions are measurable; Claude subscription savings still require matched task benchmarks.
 
@@ -52,27 +54,29 @@ The engineering work includes MCP negotiation, context compaction and recovery, 
 
 | Measure | Acceptance criterion |
 | --- | --- |
-| Speed | Baseline elapsed time divided by OpenRagnar elapsed time is at least 10 for the declared benchmark workload. Measure from task submission through independently verified completion. |
+| Speed | Baseline elapsed time divided by BrowserHelm elapsed time is at least 10 for the declared benchmark workload. Measure from task submission through independently verified completion. |
 | Quality | Maintain or improve completion accuracy. Retain failures, recovery time and escalation; faster unsuccessful attempts are not completed tasks. |
 | Cost | Compare total cost per successful task, including main-agent usage, decision and vision calls, and memory embedding/storage. Aim for equal or lower cost; disclose any increase separately from speed. Missing costs remain unknown. |
 | Subscription efficiency | Track client-reported tokens and planner turns separately from API cost estimates. Lower usage can preserve allowance; it does not automatically lower a fixed subscription bill or establish a quota-savings percentage. |
 | Learning | Report first-run and learned-repeat results separately, plus performance when the page changes. Improvement comes from verified procedure reuse and relevant failure lessons; model weights are not trained, and every new run is not guaranteed to improve. |
 
-Use matched tasks, the same main-agent model and comparable browser state and tool exposure. Publish the task set, settings, sample size, success rate, median/tail latency and cost assumptions with any performance claim. Compare Neo directly with OpenRagnar local and cloud paths, with and without learning; follow the [benchmark procedure](docs/benchmarks.md). Small fixture timings, compacted bytes and individual calls avoided establish mechanisms, not the 10× target.
+Use matched tasks, the same main-agent model and comparable browser state and tool exposure. Publish the task set, settings, sample size, success rate, median/tail latency and cost assumptions with any performance claim. Compare Neo directly with BrowserHelm local and cloud paths, with and without learning; follow the [benchmark procedure](docs/benchmarks.md). Small fixture timings, compacted bytes and individual calls avoided establish mechanisms, not the 10× target.
 
 The development priority is fewer expensive planner round trips: bounded multi-step execution, deterministic browser evidence, verified experience reuse and compact results. Use Jev or vision when the task needs it, and justify cloud calls by measured total-task benefit. Local vision is the default starting path; users can explicitly select OpenRouter. Both paths must meet the same correctness and measurement requirements.
 
 ## Measured results (0.4.12)
+
+These results were measured before the rename under OpenRagnar 0.4.12. BrowserHelm 0.5.0 preserves that engine behavior; the UI/name change is not a new performance measurement.
 
 On **October 11, 2026**, the six-case suite ran **18 actual Claude tasks**, one attempt per case in each mode. All used **Opus 5.5 on High, Claude Code 2.1.296**, the same Neo backend and comparable task-specific tools. Delegated vision used local Ollama `qwen3-vl:2b-instruct`; the repeatable navigation plan used Jev. These are controlled Claude Code results, not persistent Claude Desktop timings.
 
 | Mode | Independently verified | Sum of six task times | Main-agent turns | Main-agent API-equivalent cost |
 | --- | ---: | ---: | ---: | ---: |
 | BrowserOS Neo directly | 5/6* | 71.25s | 24 | $0.448888 |
-| OpenRagnar, delegation off | 6/6 | 53.05s | 19 | $0.399326 |
-| OpenRagnar, delegation on | 6/6 | 53.27s | 19 | $0.431377 |
+| BrowserHelm, delegation off | 6/6 | 53.05s | 19 | $0.399326 |
+| BrowserHelm, delegation on | 6/6 | 53.27s | 19 | $0.431377 |
 
-| Task | Neo directly | Ragnar off | Ragnar on |
+| Task | Neo directly | Gateway off | Gateway on |
 | --- | ---: | ---: | ---: |
 | Guarded typography inspection | 6.34s | 5.08s | 5.32s |
 | Public navigation and extraction | 20.28s* | 9.43s | 15.97s |
@@ -81,11 +85,11 @@ On **October 11, 2026**, the six-case suite ran **18 actual Claude tasks**, one 
 | Unknown-outcome recovery | 9.37s | 8.37s | 7.36s |
 | Repeatable navigation, first acquisition | 17.50s | 8.89s | 8.14s |
 
-Compared with the original 0.4.11 pilot, delegation on went from **84.00s to 53.27s** across the six tasks (**37% less elapsed time**), from **35 to 19 planner turns**, and from **$0.567924 to $0.431377** in main-agent API-equivalent cost (**24% lower**). Both delegated passes verified 6/6 tasks. Optional markers removed 12 start/finish tool calls per Ragnar mode. The delegated public-navigation task had zero argument/help errors, down from four. Recovery deliberately injected one error per mode; all three runs verified exactly one submission.
+Compared with the original 0.4.11 pilot, delegation on went from **84.00s to 53.27s** across the six tasks (**37% less elapsed time**), from **35 to 19 planner turns**, and from **$0.567924 to $0.431377** in main-agent API-equivalent cost (**24% lower**). Both delegated passes verified 6/6 tasks. Optional markers removed 12 start/finish tool calls per gateway mode. The delegated public-navigation task had zero argument/help errors, down from four. Recovery deliberately injected one error per mode; all three runs verified exactly one submission.
 
 Delegation off and on took nearly the same total time in this pass, with off using about **7% less main-agent API-equivalent spend**. Keep delegation optional and choose it for workloads where verified completion and total cost justify it. The open-ended navigation-on task used delegated reads and direct tools without a Jev decision; the repeatable-plan task invoked Jev once. These results do not measure a fully autonomous Jev browser loop.
 
-*The direct-Neo navigation answer matched the expected URL, heading and explanation, but failed the independent live-state check. Stale tab URL metadata is a plausible verifier false negative. The attempt remains unverified and its time/cost remain in the totals; this is not evidence of a Ragnar accuracy advantage. The verifier was corrected and checked without another paid task.*
+*The direct-Neo navigation answer matched the expected URL, heading and explanation, but failed the independent live-state check. Stale tab URL metadata is a plausible verifier false negative. The attempt remains unverified and its time/cost remain in the totals; this is not evidence of a gateway accuracy advantage. The verifier was corrected and checked without another paid task.*
 
 **Limits:** one sample per case/mode is not enough for reliable median/tail latency or broad performance claims. Totals sum different workloads and include failed verification, process/MCP startup, recovery and final independent checks; fixture preparation is outside the clock. Caching, run order and network variability remain confounds. The cost column is Claude's client-reported list-price API equivalent, not a Max subscription charge or measured allowance saving. Decision/vision fees and compute or memory costs are not fully priced, so total cost per successful task remains unknown. Cloud vision, remote OpenViking retrieval and learned repeats were not measured. **The 10× target has not been demonstrated.**
 
@@ -111,27 +115,27 @@ General read/write remains available through Neo's tools. The autonomous navigat
 
 ### From Claude to the browser and back
 
-Claude plans the task and chooses an MCP tool. **OpenRagnar is the execution gateway**, **Jev is a bounded text decision model**, **vision grounds a visual target**, and **BrowserOS Neo performs the browser actions**. Results return through OpenRagnar to Claude. Optional **OpenViking** stores and retrieves past outcomes; local evidence controls whether a proven route or visual target can skip inference.
+Claude plans the task and chooses an MCP tool. **BrowserHelm is the execution gateway**, **Jev is a bounded text decision model**, **vision grounds a visual target**, and **BrowserOS Neo performs the browser actions**. Results return through BrowserHelm to Claude. Optional **OpenViking** stores and retrieves past outcomes; local evidence controls whether a proven route or visual target can skip inference.
 
-The three workflow patterns below show where context or calls can be saved. **Jev and vision are separate tools today**: Claude can use both in a task, with a return to Claude between stages. OpenRagnar does not yet implement an autonomous combined Jev-plus-vision loop. Vision can also be used without Jev.
+The three workflow patterns below show where context or calls can be saved. **Jev and vision are separate tools today**: Claude can use both in a task, with a return to Claude between stages. BrowserHelm does not yet implement an autonomous combined Jev-plus-vision loop. Vision can also be used without Jev.
 
 #### 1. Direct browser tools
 
-![Claude to OpenRagnar to Neo and back, with gateway context savings and optional memory](docs/images/browser-path-direct.png)
+![Claude to BrowserHelm to Neo and back, with gateway context savings and optional memory](docs/images/browser-path-direct.png)
 
-Claude sends `run` or a granular browser tool; OpenRagnar forwards it to Neo and compacts the result. No Jev or vision inference is added. Shorter descriptions, duplicate removal and bounded text reduce browser context; omitted output remains recoverable. Claude retains planning and overall task verification.
+Claude sends `run` or a granular browser tool; BrowserHelm forwards it to Neo and compacts the result. No Jev or vision inference is added. Shorter descriptions, duplicate removal and bounded text reduce browser context; omitted output remains recoverable. Claude retains planning and overall task verification.
 
 #### 2. Jev-assisted public navigation
 
 ![Jev-assisted navigation, local verification, route reuse and savings](docs/images/browser-path-jev.png)
 
-One `openragnar_navigate` call can observe links, ask Jev to choose, recheck and follow the current link, and verify the requested phrase before returning to Claude. This can avoid intermediate Claude planning turns. Two qualifying local successes can permit route reuse without a decision call; live checks remain. The loop handles public same-origin links, not forms or arbitrary workflows.
+One `browserhelm_navigate` call can observe links, ask Jev to choose, recheck and follow the current link, and verify the requested phrase before returning to Claude. This can avoid intermediate Claude planning turns. Two qualifying local successes can permit route reuse without a decision call; live checks remain. The loop handles public same-origin links, not forms or arbitrary workflows.
 
 #### 3. Jev and vision in the same task
 
 ![Separate navigation and visual calls coordinated by Claude, including savings and OpenViking](docs/images/browser-path-jev-vision.png)
 
-Claude can navigate with Jev, then call `openragnar_visual_act` for a target that structured page evidence cannot identify. OpenRagnar captures through Neo, asks the selected grounder for coordinates, checks freshness and optionally sends one explicit click. The visual tool returns a compact report without the screenshot. Local vision is the starting path; explicitly selected cloud vision adds provider cost. Qualifying identical-task/scene evidence can avoid inference on repeats.
+Claude can navigate with Jev, then call `browserhelm_visual_act` for a target that structured page evidence cannot identify. BrowserHelm captures through Neo, asks the selected grounder for coordinates, checks freshness and optionally sends one explicit click. The visual tool returns a compact report without the screenshot. Local vision is the starting path; explicitly selected cloud vision adds provider cost. Qualifying identical-task/scene evidence can avoid inference on repeats.
 
 **OpenViking is a memory side channel, not an action hop.** Navigation recall is local-first and bounded to two hints / 1.6 KB. Remote hints are advisory; only independent local verification can authorize automatic reuse. Outcomes and failure lessons queue for vector-only upload. Screenshot data and visual coordinates stay local. Memory embedding/storage costs can still apply.
 
@@ -166,19 +170,26 @@ Each MCP connection launches its own gateway. Closing the GUI does not stop a cl
 For a source build, use an Apple Silicon Mac running macOS 14+, Xcode selected with `xcode-select`, and a relocatable Apple Silicon Python **3.12** runtime for packaging. Keep BrowserOS Neo running for connection and live browser checks. Python unit tests also support 3.9+. For packaged-app requirements, see [Requirements](#requirements).
 
 ```sh
-git clone https://github.com/RaDeleon/OpenRagnar.git
-cd OpenRagnar
+git clone https://github.com/RaDeleon/BrowserHelm.git
+cd BrowserHelm
 ```
 
-Download an `aarch64-apple-darwin` Python 3.12 `install_only` archive from the official [python-build-standalone releases](https://github.com/astral-sh/python-build-standalone/releases). Extract its `python` directory to `.runtime/python`, retaining its license notices. Alternatively set `OPENRAGNAR_RUNTIME_SOURCE` to that directory. A system or Homebrew Python installation is not a substitute for the relocatable runtime.
+Download an `aarch64-apple-darwin` Python 3.12 `install_only` archive from the official [python-build-standalone releases](https://github.com/astral-sh/python-build-standalone/releases). Extract its `python` directory to `.runtime/python`, retaining its license notices. Alternatively set `BROWSERHELM_RUNTIME_SOURCE` to that directory. A system or Homebrew Python installation is not a substitute for the relocatable runtime.
 
 ```sh
 ./script/build_and_run.sh --build
 ./script/package_dmg.sh
-open dist/OpenRagnar.app
+python3 script/install_local.py
 ```
 
-The package script creates a versioned `dist/OpenRagnar-<version>-arm64.dmg`. Install the app in Applications before configuring clients. **Connectors → Connect Claude Desktop** and **Connectors → Connect Codex** back up and add a separate `openragnar` entry, preserving other servers. Codex setup uses its shared `~/.codex/config.toml` (or `CODEX_HOME/config.toml` when set), requires no separately installed CLI, preserves comments, and refuses invalid TOML or conflicting entries. Copy config remains available for manual setup. Open a new Codex chat or restart the client to load the tools. Configured is distinct from a live connection; old processes retain their loaded engine.
+The first install command previews the migration. Finish active MCP/browser tasks, then install and open the app:
+
+```sh
+python3 script/install_local.py --apply --idle-confirmed
+open /Applications/BrowserHelm.app
+```
+
+The package script creates a versioned `dist/BrowserHelm-<version>-arm64.dmg`. Install the app in Applications before configuring clients. **Connectors → Connect Claude Desktop** and **Connectors → Connect Codex** back up and add a separate `browserhelm` entry, preserving other servers. Codex setup uses its shared `~/.codex/config.toml` (or `CODEX_HOME/config.toml` when set), requires no separately installed CLI, preserves comments, and refuses invalid TOML or conflicting entries. Copy config remains available for manual setup. Open a new Codex chat or restart the client to load the tools. Configured is distinct from a live connection; old processes retain their loaded engine.
 
 Local builds are ad-hoc signed. The [release guide](docs/releases.md) covers isolated test builds, Developer ID signing, notarization and the feature → staging → main workflow. Public signing remains unverified pending Apple Developer enrollment; setting up these scripts does not make an existing DMG notarized.
 
@@ -187,8 +198,8 @@ Other MCP clients can use:
 ```json
 {
   "mcpServers": {
-    "openragnar": {
-      "command": "/Applications/OpenRagnar.app/Contents/MacOS/OpenRagnar",
+    "browserhelm": {
+      "command": "/Applications/BrowserHelm.app/Contents/MacOS/BrowserHelm",
       "args": ["--mcp"]
     }
   }
@@ -197,29 +208,29 @@ Other MCP clients can use:
 
 Select a provider and save its endpoint, model and key in **Settings**. Keys use macOS Keychain and are fetched lazily; regular browser tools need no decision-provider key. **Test provider** makes a real provider request. Keychain may request approval after an ad-hoc rebuild.
 
-See the [user guide](README-OpenRagnar.md) for provider endpoints, Codex configuration and setup details.
+See the [user guide](README-BrowserHelm.md) for provider endpoints, Codex configuration and setup details.
 
-For optional screenshot grounding, open **Settings → Vision**. The tested starting model is `qwen3-vl:2b-instruct` in Ollama, downloaded separately (about 1.9 GB). Keep it local or select OpenRouter and one of three presets, then save. Enter your OpenRouter key in the vision section for cloud models. First enabling vision requires reconnecting your MCP client; subsequent model switches apply to its next request. Ask the client to use `openragnar_visual_act` for visual targets instead of receiving screenshots itself. Jev remains your text decision provider. See [local vision setup, boundaries and tests](docs/local-vision.md). BrowserVLM's unreleased weights are not bundled, and this feature does not establish 10× speed or subscription savings.
+For optional screenshot grounding, open **Settings → Vision**. The tested starting model is `qwen3-vl:2b-instruct` in Ollama, downloaded separately (about 1.9 GB). Keep it local or select OpenRouter and one of three presets, then save. Enter your OpenRouter key in the vision section for cloud models. First enabling vision requires reconnecting your MCP client; subsequent model switches apply to its next request. Ask the client to use `browserhelm_visual_act` for visual targets instead of receiving screenshots itself. Jev remains your text decision provider. See [local vision setup, boundaries and tests](docs/local-vision.md). BrowserVLM's unreleased weights are not bundled, and this feature does not establish 10× speed or subscription savings.
 
 ## Try a delegated task
 
 With Neo running and a provider configured, ask your MCP client:
 
-> Use OpenRagnar's openragnar_navigate. Start at https://docs.typesafe.ai/models, find the API reference describing choice-answer probabilities, and verify the phrase "floats that sum to 1". Use maxSteps 3. Report completion and the provider usage returned by the tool.
+> Use BrowserHelm's browserhelm_navigate. Start at https://docs.typesafe.ai/models, find the API reference describing choice-answer probabilities, and verify the phrase "floats that sum to 1". Use maxSteps 3. Report completion and the provider usage returned by the tool.
 
 Success means the phrase was found in rendered page text, not that a broader goal is proven. Selected links must still exist on the current page. There are no automatic browser-action retries or paid-provider fallbacks.
 
 ## Dashboard appearance
 
-OpenRagnar takes its name from Ragnar Lothbrok. The native dashboard uses bronze and stone tones with a runic mark. Choose System, Light or Dark from the appearance menu or Settings. Context savings use a ring and comparison bars; the recent-request chart shows the latest 24 retained tool requests. Neo estimates, provider-reported tokens and manually entered Claude comparisons remain separate. Empty and unknown values are labeled instead of presented as measured zeroes.
+BrowserHelm uses the Packet Studio design: graphite/navy surfaces, cyan accents, native sidebar navigation and a text-free browser/data-routing icon. New installations start in Dark appearance. Choose System, Light or Dark from the appearance menu or Settings. Context savings use a ring and comparison bars; the recent-request chart shows the latest 24 retained tool requests. Neo estimates, provider-reported tokens and manually entered Claude comparisons remain separate. Empty and unknown values are labeled instead of presented as measured zeroes.
 
-The **Diagnostics** page adds searchable metadata-only events, failure explanations and next steps, connection/build identity, a fresh Neo connection check and local report export. New connections retain bounded events independently of token counters. Older failed counter rows and Claude MCP log codes remain visible with their limited detail clearly labeled. See the [diagnostics guide](README-OpenRagnar.md#diagnostics-and-debugging-041).
+The **Diagnostics** page adds searchable metadata-only events, failure explanations and next steps, connection/build identity, a fresh Neo connection check and local report export. New connections retain bounded events independently of token counters. Older failed counter rows and Claude MCP log codes remain visible with their limited detail clearly labeled. See the [diagnostics guide](README-BrowserHelm.md#diagnostics-and-debugging-041).
 
 ## Experience memory
 
 Enable **Settings → OpenViking memory** to use an existing private `~/.openviking/ovcli.conf` connection. The Memory page shows uploaded/pending outcomes, recalled-hint counts and recent tasks.
 
-- Retrieval is scoped to `viking://~/memories/experiences/openragnar`, with at most two hints and a combined 1.6 KB hint budget per decision.
+- Retrieval is scoped to `viking://~/memories/experiences/browserhelm`, with at most two hints and a combined 1.6 KB hint budget per decision.
 - Records contain user-provided goals and success phrases, public routes, provider/model and checked outcomes. Page bodies, screenshots, form contents and model reasoning are excluded. Common credential/email patterns are redacted; do not put confidential information in public-navigation goals.
 - Offline uploads queue privately, use stable URIs and cross-process leases, and back off without retrying browser actions.
 - Two local text-verified runs of the same navigation task can bypass a provider decision, while live link checks and text verification remain. Later route failures revoke eligibility. Remote hints remain advisory and cannot independently seed reuse.
@@ -247,7 +258,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s neo-personal -p 'test_
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s script -p 'test_*.py'
 ```
 
-The current source suites have 148 gateway/diagnostics/learning/vision tests and 24 release/settings/readiness tests, for 172 tests in total. Page-side JavaScript readiness tests use Node when available; the native settings probe runs on macOS. GitHub Actions runs both Python suites and a separate native Swift compile check. Live checks are opt-in; the [benchmark procedure](docs/benchmarks.md) explains their effects and how to measure matched tasks.
+The 0.5.1 source suites have 206 engine tests and 26 release/settings/readiness tests, plus the benchmark oracle suite. Page-side JavaScript readiness tests use Node when available; the native settings probe runs on macOS. GitHub Actions runs both Python suites and a separate native Swift compile check. Live checks are opt-in; the [benchmark procedure](docs/benchmarks.md) explains their effects and how to measure matched tasks.
 
 The 0.4.7 navigation pass removes one gateway-to-Neo round trip per followed link, defers key access and advisory recall until inference is needed, and waits for either the requested text or a usable link. A controlled linkless-page fixture avoids the former eight-second wait. See the [optimization review and measured limits](docs/validation/0.4.7-optimization-review.md).
 
@@ -255,9 +266,9 @@ The 0.4.7 navigation pass removes one gateway-to-Neo round trip per followed lin
 
 | Location | Responsibility |
 | --- | --- |
-| `mac-app/Sources/OpenRagnar/` | Native UI, launcher, settings and Keychain. |
+| `mac-app/Sources/BrowserHelm/` | Native UI, launcher, settings and Keychain. |
 | `neo-personal/gateway.py` | MCP transport, compaction and output recovery. |
-| `neo-personal/openragnar.py` | Delegation, verification, CLI and instrumentation. |
+| `neo-personal/browserhelm.py` | Delegation, verification, CLI and instrumentation. |
 | `neo-personal/decision.py` | Provider adapters. |
 | `neo-personal/vision.py` | Local/OpenRouter screenshot grounding and single-click freshness/verification guards. |
 | `mac-app/Artwork/` | Original native app icon; editable Core Graphics source in `script/generate_icon.swift`. |
@@ -266,10 +277,27 @@ The 0.4.7 navigation pass removes one gateway-to-Neo round trip per followed lin
 | `neo-personal/test_*.py` | Transport, privacy, concurrency and recovery regressions. |
 | `script/` | Build, staging, packaging and relocation checks. |
 
-The early installer remains only for rollback regression helpers; its direct CLI is disabled. Use the separate OpenRagnar entry rather than replacing official Neo entries.
+The early installer remains only for rollback regression helpers; its direct CLI is disabled. Use the separate BrowserHelm entry rather than replacing official Neo entries.
+
+## Repository contents and privacy
+
+| Folder | Included in source downloads |
+| --- | --- |
+| `mac-app/` | Native app source and original icon assets. Swift build output is ignored. |
+| `neo-personal/` | Gateway engine and regression tests. This legacy folder name is retained for existing build/import paths; the app is BrowserHelm. |
+| `benchmarks/` | Reproducible harnesses, synthetic scenarios and independent test oracles. Raw run output is ignored. |
+| `docs/` | Setup/release guides, diagrams and reviewed benchmark summaries. Historical results retain the name/version measured. |
+| `script/` | Build, packaging, installation and validation tools. These are source files, not captured user sessions. |
+| `.github/`, `.githooks/` | CI workflows and the opt-in local commit guard; no saved credentials. |
+
+Generated reports, logs, captures, databases, private settings, local agent state, bundled runtimes, the separate BrowserOS checkout and design drafts stay outside Git. App packaging rejects local/test artifacts and includes only approved runtime resources. Required test source and sanitized results stay available for contributors. See [publication review](docs/publication.md) and [secret/artifact checks](docs/secret-checks.md).
 
 ## License and acknowledgments
 
-Original OpenRagnar code is [Apache-2.0](LICENSE). Dependencies retain their own licenses; see [NOTICE](NOTICE) and [third-party notices](THIRD_PARTY_NOTICES.md).
+Original BrowserHelm code is [Apache-2.0](LICENSE). Dependencies retain their own licenses; see [NOTICE](NOTICE) and [third-party notices](THIRD_PARTY_NOTICES.md).
 
 [BrowserOS Neo](https://github.com/browseros-ai/BrowserOS) supplies external browser execution under its own AGPL-3.0 license. [OpenViking](https://github.com/volcengine/OpenViking) supplies external memory. Neither project is bundled in this source repository or app. Provider names identify compatibility and do not imply endorsement.
+
+### Remove a client connection
+
+In **Settings → MCP clients** or **Connectors**, choose **Remove from Claude Desktop** or **Remove from Codex** and confirm. Only BrowserHelm’s matching MCP entry is removed, with a private backup; other connectors and app data remain. Finish active browser work first. Restart the client to unload its cached tools. Use Connect to add the entry again.

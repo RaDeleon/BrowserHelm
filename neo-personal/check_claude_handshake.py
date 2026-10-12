@@ -5,7 +5,7 @@ import select
 import subprocess
 import time
 root=pathlib.Path(__file__).resolve().parent.parent
-executable=root/'dist/OpenRagnar.app/Contents/MacOS/OpenRagnar'
+executable=root/'dist/BrowserHelm.app/Contents/MacOS/BrowserHelm'
 process=subprocess.Popen([str(executable),'--mcp'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1)
 def call(method,params,number):
     process.stdin.write(json.dumps({'jsonrpc':'2.0','method':method,'params':params,'id':number})+'\n');process.stdin.flush()

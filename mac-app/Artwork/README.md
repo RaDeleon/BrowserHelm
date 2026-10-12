@@ -1,13 +1,7 @@
-# App icon
+# BrowserHelm app icon
 
-An angular bronze R inside a browser gateway connects two nodes, reflecting OpenRagnar's role between agent clients and BrowserOS Neo. Slate and bronze match the app's existing appearance. The R matches the sidebar's subtle runic geometry; the name comes from Ragnar Lothbrok.
+The selected Packet Studio icon is a cyan browser frame with a routed three-node data path and arrow on graphite/navy. It contains no lettering or Viking imagery.
 
-`AppIcon.icns` includes native 16–1024 pixel representations with a transparent margin. `AppIcon.png` is the 1024 pixel preview. Both are original project artwork generated with AppKit/Core Graphics and covered by the repository license.
+`BrowserHelm-master.png` is the approved image-generation concept. `AppIcon.png` is the 1024 pixel preview; `AppIcon.icns` includes native 16–1024 pixel representations with transparent margins. The sidebar and packaged app use this same artwork.
 
-To edit and regenerate on macOS, change `script/generate_icon.swift`, then run from the repository root:
-
-```sh
-swift script/generate_icon.swift
-```
-
-Staging copies the committed ICNS file into the signed bundle and declares `CFBundleIconFile`. GitHub DMG builds use the same artwork without a separate asset download or generator dependency.
+Regenerate native sizes on macOS with `swift script/generate_icon.swift`. Staging copies both AppIcon files into the signed bundle. CI uses the committed artwork with no network asset dependency.

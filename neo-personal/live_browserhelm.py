@@ -7,10 +7,10 @@ import subprocess
 import time
 root=pathlib.Path(__file__).resolve().parent.parent
 parser=argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--app',type=pathlib.Path,default=pathlib.Path('/Applications/OpenRagnar.app'),help='Installed app by default; choose an explicit test bundle to override.')
+parser.add_argument('--app',type=pathlib.Path,default=pathlib.Path('/Applications/BrowserHelm.app'),help='Installed app by default; choose an explicit test bundle to override.')
 args=parser.parse_args()
-app=args.app.expanduser().resolve()/'Contents/MacOS/OpenRagnar'
-if not app.is_file(): parser.error('App missing. Install OpenRagnar or pass --app dist/OpenRagnar.app.')
+app=args.app.expanduser().resolve()/'Contents/MacOS/BrowserHelm'
+if not app.is_file(): parser.error('App missing. Install BrowserHelm or pass --app dist/BrowserHelm.app.')
 process=subprocess.Popen([str(app),'--mcp'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1)
 
 def call(method,params,number):
@@ -28,14 +28,14 @@ def call(method,params,number):
     raise RuntimeError('Response deadline exceeded')
 
 try:
-    init=call('initialize',{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'OpenRagnar live provider validation','version':'0.4.0'}},1)
+    init=call('initialize',{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'BrowserHelm live provider validation','version':'0.4.0'}},1)
     process.stdin.write(json.dumps({'jsonrpc':'2.0','method':'notifications/initialized'})+'\n');process.stdin.flush()
     catalog=call('tools/list',{},2)
     print(json.dumps({'server':init['serverInfo'],'catalogBytes':len(json.dumps(catalog).encode()),'tools':[t['name'] for t in catalog['tools']]}),flush=True)
-    result=call('tools/call',{'name':'openragnar_navigate','arguments':{'startUrl':'https://docs.typesafe.ai/models','goal':'Find the API reference describing choice-answer probabilities','successText':'floats that sum to 1','maxSteps':3}},3)
+    result=call('tools/call',{'name':'browserhelm_navigate','arguments':{'startUrl':'https://docs.typesafe.ai/models','goal':'Find the API reference describing choice-answer probabilities','successText':'floats that sum to 1','maxSteps':3}},3)
     print(json.dumps(result),flush=True)
     report={'app':str(args.app),'server':init['serverInfo'],'catalogBytes':len(json.dumps(catalog).encode()),'toolCount':len(catalog['tools']),'navigation':result,'limitations':'One public-site task. Provider usage returned when available; no Claude quota benchmark.'}
-    (root/'neo-personal/openragnar-live-results.json').write_text(json.dumps(report,indent=2)+'\n')
+    (root/'neo-personal/browserhelm-live-results.json').write_text(json.dumps(report,indent=2)+'\n')
     if result.get('isError'):
         raise SystemExit('Provider/browser test failed; inspect the saved report before retrying.')
     payload=None

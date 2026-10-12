@@ -6,7 +6,7 @@ import time
 import unittest
 from unittest.mock import patch
 from experience import ExperienceMemory, MAX_HINT_BYTES, clean
-from openragnar import OpenRagnarGateway
+from browserhelm import BrowserHelmGateway
 
 class ExperienceTests(unittest.TestCase):
     def setUp(self):
@@ -70,18 +70,18 @@ class ExperienceTests(unittest.TestCase):
             self.assertEqual(self.m.recall('https://example.com/','x','other phrase'),[])
     def test_remote_content_read_confined_to_authenticated_collection(self):
         def request(path,body=None,**kw):
-            if path=='/health':return {'healthy':True,'user_id':'adeleon'}
-            if path=='/api/v1/search/find':return {'memories':[{'uri':'viking://user/other/memories/experiences/openragnar/abc.md'},{'uri':'viking://user/adeleon/memories/entities/secrets.md'}]}
+            if path=='/health':return {'healthy':True,'user_id':'fixture-user'}
+            if path=='/api/v1/search/find':return {'memories':[{'uri':'viking://user/other/memories/experiences/openragnar/abc.md'},{'uri':'viking://user/fixture-user/memories/entities/secrets.md'}]}
             raise AssertionError('Unauthorized content read')
         with patch.object(self.m,'request',side_effect=request): self.assertEqual(self.m.recall('https://example.com/','x','target phrase'),[])
     def test_remote_untrusted_malformed_and_cross_origin_routes_excluded(self):
         self.capture()
         with self.m.db() as db:d=json.loads(db.execute('SELECT document FROM experiences').fetchone()[0])
         d['created']='bad';self.m.test=lambda:None
-        self.m.state('identity_destination',self.m.destination());self.m.state('user_id','adeleon')
+        self.m.state('identity_destination',self.m.destination());self.m.state('user_id','fixture-user')
         with self.m.db() as db:db.execute('DELETE FROM experiences')
         def request(path,body=None,**kw):
-            if path=='/api/v1/search/find':return {'memories':[{'uri':'viking://user/adeleon/memories/experiences/openragnar/abc.md'}]}
+            if path=='/api/v1/search/find':return {'memories':[{'uri':'viking://user/fixture-user/memories/experiences/openragnar/abc.md'}]}
             return json.dumps(d)
         with patch.object(self.m,'request',side_effect=request):self.assertEqual(self.m.recall('https://example.com/','x','target phrase'),[])
         d['created']=time.time();d['route'][0]['to']='https://evil.example/go'
@@ -93,7 +93,7 @@ class ExperienceTests(unittest.TestCase):
             worker=threading.Thread(target=self.m.sync);worker.start();self.assertTrue(entered.wait(1));self.m.sync();release.set();worker.join()
         self.assertEqual(call.call_count,1)
     def test_gateway_reuses_hints_without_skipping_current_link_check(self):
-        self.capture();g=OpenRagnarGateway({'provider':'ollama','providers':{'ollama':{'endpoint':'http://localhost:11434/v1','model':'test'}}},self.path/'outputs')
+        self.capture();g=BrowserHelmGateway({'provider':'ollama','providers':{'ollama':{'endpoint':'http://localhost:11434/v1','model':'test'}}},self.path/'outputs')
         g.memory=self.m
         state={'url':'https://example.com/','title':'Docs','found':False,'links':[{'url':'https://example.com/docs','label':'Documentation'}]}
         decision={'choice':'L0','probability':.9,'evidence':'test','usage':{},'model':'test'}

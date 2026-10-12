@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Legacy Neo-entry migration helpers retained for rollback regression tests.
 
-The direct CLI is disabled. Current connections use a separate OpenRagnar entry.
+The direct CLI is disabled. Current connections use a separate BrowserHelm entry.
 """
 import argparse
 import datetime
@@ -122,4 +122,4 @@ def main():
     print("Saved and backed up. Restart/reconnect clients to load the new transport; no browser restart required.")
 
 if __name__ == "__main__":
-    raise SystemExit('Legacy Neo-entry replacement installer is disabled. Use OpenRagnar Settings and Connectors, or the separate openragnar MCP entry documented in README-OpenRagnar.md. Its helpers remain only for rollback regression tests.')
+    raise SystemExit('Legacy Neo-entry replacement installer is disabled. Use BrowserHelm Settings and Connectors, or the separate browserhelm MCP entry documented in README-BrowserHelm.md. Its helpers remain only for rollback regression tests.')
