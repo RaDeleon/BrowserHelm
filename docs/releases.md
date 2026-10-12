@@ -71,7 +71,7 @@ Before publishing, test the downloaded, quarantined DMG on a separate Mac or cle
 
 Stable Developer ID signing lets Keychain recognize signed updates. Existing ad-hoc installs may need a one-time approval when changing signing identity. Notarization does not remove legitimate user permission prompts.
 
-**Current status:** the local path is tested. The Developer ID submission path is prepared and covered by offline policy tests, but actual certificate signing, Apple acceptance and clean-machine installation remain unverified until enrollment is approved. The tag-triggered GitHub Actions workflow publishes verified preview DMGs to GitHub Releases. The local signing/notarization scripts do not publish to GitHub or the Mac App Store.
+**Current status:** the local path is tested. The Developer ID submission path is prepared and covered by offline policy tests, but actual certificate signing, Apple acceptance and clean-machine installation remain unverified until enrollment is approved. The tag-triggered GitHub Actions workflow publishes verified DMGs to GitHub Releases with preview status stated in the title and notes. The local signing/notarization scripts do not publish to GitHub or the Mac App Store.
 
 References: [Developer ID](https://developer.apple.com/developer-id/), [notarization requirements](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution), [custom notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).
 
@@ -79,7 +79,7 @@ References: [Developer ID](https://developer.apple.com/developer-id/), [notariza
 
 `.github/workflows/release.yml` runs when a `v*` tag is pushed. It validates the tag against `neo-personal/version.py` and requires corresponding `docs/release-notes/<version>.md` notes. Both Python 3.9 and 3.12 must pass gateway and release-tooling tests before the Apple Silicon macOS 15 job builds. The standalone Python runtime is pinned to an official archive and SHA-256 digest. CI verifies the read-only DMG, bundled runtime, HTTPS, signatures and checksum without accessing your browser or decision-provider credentials.
 
-The publish job alone receives repository write permission. It uploads the DMG, checksum, verification JSON and source commit before publishing an ad-hoc **prerelease**. Published versions cannot be overwritten by rerunning the workflow; use a new version for a changed build. If publishing stopped while the release was still a draft, rerunning can replace its incomplete draft assets.
+The publish job alone receives repository write permission. It uploads the DMG, checksum, verification JSON and source commit before publishing a regular GitHub release titled **preview**. GitHub’s Latest release and repository sidebar exclude prereleases, so the workflow publishes with `prerelease=false` and `make_latest=legacy`; GitHub selects the latest using the release date and semantic version. The app remains experimental and ad-hoc signed, not notarized. This release-display setting does not certify stability, signing or notarization. Published versions cannot be overwritten by rerunning the workflow; use a new version for a changed build. If publishing stopped while the release was still a draft, rerunning can replace its incomplete draft assets.
 
 For each new version, update `VERSION` and increment `BUILD` in `neo-personal/version.py`, add release notes, test and promote the commit to `main`. Then:
 

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing version tag to build (for example v0.4.3)
+        description: Existing version tag to build (for example v0.5.1)
         required: true
         type: string
 
@@ -96,7 +96,7 @@ jobs:
             dist/SOURCE-COMMIT.txt
 
   publish:
-    name: Publish verified prerelease assets
+    name: Publish verified release assets
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -117,7 +117,8 @@ jobs:
           if gh release view "$RELEASE_TAG" --json isDraft > "$RUNNER_TEMP/release.json" 2>/dev/null; then
             python3 -c 'import json,sys; assert json.load(open(sys.argv[1]))["isDraft"], "Release is already published; use a new version tag"' "$RUNNER_TEMP/release.json"
           else
-            gh release create "$RELEASE_TAG" --verify-tag --draft --prerelease --title "BrowserHelm $VERSION (preview)" --notes-file dist/RELEASE-NOTES.md
+            gh release create "$RELEASE_TAG" --verify-tag --draft --title "BrowserHelm $VERSION (preview)" --notes-file dist/RELEASE-NOTES.md
           fi
           gh release upload "$RELEASE_TAG" "dist/BrowserHelm-$VERSION-arm64.dmg" "dist/BrowserHelm-$VERSION-arm64.dmg.sha256" "dist/BrowserHelm-$VERSION-arm64.verification.json" dist/SOURCE-COMMIT.txt --clobber
-          gh release edit "$RELEASE_TAG" --draft=false --prerelease --latest=false
+          RELEASE_ID="$(gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" --jq .id)"
+          gh api --method PATCH "repos/$GH_REPO/releases/$RELEASE_ID" -F draft=false -F prerelease=false -f make_latest=legacy --jq .tag_name

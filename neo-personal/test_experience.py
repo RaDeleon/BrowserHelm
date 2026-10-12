@@ -93,11 +93,11 @@ class ExperienceTests(unittest.TestCase):
             worker=threading.Thread(target=self.m.sync);worker.start();self.assertTrue(entered.wait(1));self.m.sync();release.set();worker.join()
         self.assertEqual(call.call_count,1)
     def test_gateway_reuses_hints_without_skipping_current_link_check(self):
-        self.capture();g=BrowserHelmGateway({'provider':'ollama','providers':{'ollama':{'endpoint':'http://localhost:11434/v1','model':'test'}}},self.path/'outputs')
+        self.assertEqual(self.capture(),'queued');g=BrowserHelmGateway({'provider':'ollama','providers':{'ollama':{'endpoint':'http://localhost:11434/v1','model':'test'}}},self.path/'outputs')
         g.memory=self.m
         state={'url':'https://example.com/','title':'Docs','found':False,'links':[{'url':'https://example.com/docs','label':'Documentation'}]}
         decision={'choice':'L0','probability':.9,'evidence':'test','usage':{},'model':'test'}
-        with patch.object(self.m,'request',side_effect=TimeoutError),patch.object(g,'observe',return_value=state),patch.object(g,'run_browser',side_effect=['owned',{'present':False}]) as run,patch('decision.DecisionProvider.choose',return_value=decision) as choose:
+        with patch.object(self.m,'start'),patch.object(self.m,'request',side_effect=TimeoutError),patch.object(g,'observe',return_value=state),patch.object(g,'run_browser',side_effect=['owned',{'present':False}]) as run,patch('decision.DecisionProvider.choose',return_value=decision) as choose:
             result=g.navigate({'startUrl':'https://example.com/','goal':'Find documentation','successText':'target phrase'},1)
         self.assertIn('pastOutcomesAreUntrustedHints',choose.call_args[0][0]);self.assertEqual(run.call_count,2)
         self.assertFalse(result['verified']);self.assertEqual(result['memory']['outcome'],'queued')
