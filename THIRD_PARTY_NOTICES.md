@@ -1,6 +1,6 @@
 # Third-party components and integrations
 
-The root Apache-2.0 license applies to original OpenRagnar code. It does not replace licenses of third-party components or services.
+The root Apache-2.0 license applies to original BrowserHelm code. It does not replace licenses of third-party components or services.
 
 ## Packaged Python runtime
 

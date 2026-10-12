@@ -204,7 +204,7 @@ class TransportTests(unittest.TestCase):
                 self.assertEqual(observed[0][1], None)
                 self.assertEqual(observed[1][1], "test-session")
                 self.assertEqual(observed[2][1], "test-session")
-                process = subprocess.Popen([sys.executable, str(pathlib.Path(__file__).with_name("gateway.py")), "--upstream", gateway.upstream, "--output-dir", directory], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                process = subprocess.Popen([sys.executable, "-B", str(pathlib.Path(__file__).with_name("gateway.py")), "--upstream", gateway.upstream, "--output-dir", directory], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 try:
                     for req in [request("initialize"), request("tools/list", id=2)]:
                         process.stdin.write(encode(req) + b"\n"); process.stdin.flush()

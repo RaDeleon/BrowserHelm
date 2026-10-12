@@ -16,7 +16,7 @@ import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'neo-personal'))
-from openragnar import OpenRagnarGateway
+from browserhelm import BrowserHelmGateway
 from vision import DEFAULT_VISION
 
 
@@ -27,8 +27,8 @@ def main():
     handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(ROOT / 'neo-personal/fixtures'))
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
-    with tempfile.TemporaryDirectory(prefix='openragnar-vision-smoke-') as directory:
-        gateway = OpenRagnarGateway({'vision': {**DEFAULT_VISION, 'enabled': True}}, directory)
+    with tempfile.TemporaryDirectory(prefix='browserhelm-vision-smoke-') as directory:
+        gateway = BrowserHelmGateway({'vision': {**DEFAULT_VISION, 'enabled': True}}, directory)
         counter = 0
         def request(method, params):
             nonlocal counter
@@ -38,9 +38,9 @@ def main():
                 raise RuntimeError('Smoke request failed: ' + json.dumps(result))
             return result['result']
         try:
-            initialized = request('initialize', {'protocolVersion': '2025-11-25', 'capabilities': {}, 'clientInfo': {'name': 'OpenRagnar vision check', 'version': '1.0'}})
+            initialized = request('initialize', {'protocolVersion': '2025-11-25', 'capabilities': {}, 'clientInfo': {'name': 'BrowserHelm vision check', 'version': '1.0'}})
             catalog = request('tools/list', {})
-            assert any(tool['name'] == 'openragnar_visual_act' for tool in catalog['tools'])
+            assert any(tool['name'] == 'browserhelm_visual_act' for tool in catalog['tools'])
             request('tools/call', {'name': 'tabs', 'arguments': {'action': 'list'}})
             request('tools/call', {'name': 'name_session', 'arguments': {'name': 'Local vision test', 'category': 'testing-and-qa', 'summary': 'Controlled canvas targeting and text verification with a local model.'}})
             url = 'http://127.0.0.1:%s/vision-targets.html' % server.server_port
@@ -48,7 +48,7 @@ def main():
             reports = []
             for action in ('point', 'click'):
                 started = time.monotonic()
-                result = request('tools/call', {'name': 'openragnar_visual_act', 'arguments': {'page': page, 'instruction': 'The green tile containing the white triangle', 'action': action, 'successText': 'Vision test complete'}})
+                result = request('tools/call', {'name': 'browserhelm_visual_act', 'arguments': {'page': page, 'instruction': 'The green tile containing the white triangle', 'action': action, 'successText': 'Vision test complete'}})
                 assert all(block.get('type') != 'image' for block in result['content'])
                 text = result['content'][0]['text']
                 report = json.loads(text.removeprefix('[UNTRUSTED_NEO_OUTPUT]\n').removesuffix('\n[END_UNTRUSTED_NEO_OUTPUT]'))
@@ -58,7 +58,7 @@ def main():
             bounds = gateway.run_browser('const p=await browser.page(%s);return (await p.evaluate(()=>{const r=document.querySelector("canvas").getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};})).value;' % page)
             checks = []
             for instruction, left in [('The blue tile containing the white circle', 60), ('The white square in the rightmost brown tile', 560)]:
-                result = request('tools/call', {'name': 'openragnar_visual_act', 'arguments': {'page': page, 'instruction': instruction}})
+                result = request('tools/call', {'name': 'browserhelm_visual_act', 'arguments': {'page': page, 'instruction': instruction}})
                 assert all(block.get('type') != 'image' for block in result['content'])
                 text = result['content'][0]['text']
                 point = json.loads(text.removeprefix('[UNTRUSTED_NEO_OUTPUT]\n').removesuffix('\n[END_UNTRUSTED_NEO_OUTPUT]'))

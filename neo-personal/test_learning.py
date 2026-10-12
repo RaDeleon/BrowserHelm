@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from experience import ExperienceMemory, MAX_HINT_BYTES
-from openragnar import OpenRagnarGateway
+from browserhelm import BrowserHelmGateway
 from gateway import rpc_error, rpc_result, tool_result
 
 
@@ -19,7 +19,7 @@ class LearningTests(unittest.TestCase):
         self.conf = self.root/'ovcli.conf'
         self.conf.write_text('{"url":"http://127.0.0.1:1933","api_key":"fixture-only"}')
         self.m = ExperienceMemory({'enabled': True}, self.root/'experience.sqlite', self.conf)
-        self.g = OpenRagnarGateway({'provider':'ollama', 'providers':{'ollama':{'endpoint':'http://localhost:11434/v1','model':'fixture'}}}, self.root/'outputs')
+        self.g = BrowserHelmGateway({'provider':'ollama', 'providers':{'ollama':{'endpoint':'http://localhost:11434/v1','model':'fixture'}}}, self.root/'outputs')
         self.g.memory = self.m
         self.args = {'startUrl':'https://example.com/', 'goal':'Find documentation', 'successText':'target phrase', 'maxSteps':2}
         self.route = [{'from':'https://example.com/', 'to':'https://example.com/docs', 'label':'Documentation'}]
@@ -160,7 +160,7 @@ class LearningTests(unittest.TestCase):
     def test_direct_failure_history_does_not_displace_navigation_evidence(self):
         self.save();self.save()
         for i in range(201):
-            self.m.enqueue({'id':str(i),'schema':2,'source':'openragnar','kind':'tool_outcome','created':time.time(),'verified':False})
+            self.m.enqueue({'id':str(i),'schema':2,'source':'browserhelm','kind':'tool_outcome','created':time.time(),'verified':False})
         self.assertIsNotNone(self.choice())
 
     def test_disabled_memory_never_reuses_or_captures(self):
@@ -179,16 +179,16 @@ class LearningTests(unittest.TestCase):
 
     def test_repeated_tool_failure_informs_main_agent_without_model_or_retry(self):
         first=self.tool(); second=self.tool()
-        self.assertNotIn('openragnarLearning',first['error']['data'])
-        self.assertEqual(second['error']['data']['openragnarLearning']['priorMatchingFailures'],1)
+        self.assertNotIn('browserhelmLearning',first['error']['data'])
+        self.assertEqual(second['error']['data']['browserhelmLearning']['priorMatchingFailures'],1)
         self.assertEqual(self.m.snapshot()['repeat_failure_hints'],1)
         self.assertEqual(self.m.snapshot()['tool_requests_seen'],2)
 
     def test_changed_args_and_later_accepted_request_retire_failure_hint(self):
         self.tool(); other=self.tool(arguments={'code':'different'})
-        self.assertNotIn('openragnarLearning',other['error']['data'])
+        self.assertNotIn('browserhelmLearning',other['error']['data'])
         self.tool(status='ok'); later=self.tool()
-        self.assertNotIn('openragnarLearning',later['error']['data'])
+        self.assertNotIn('browserhelmLearning',later['error']['data'])
 
     def test_history_and_synced_lesson_never_contain_request_error_or_result(self):
         self.tool(); self.tool(status='ok')

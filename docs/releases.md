@@ -1,4 +1,4 @@
-# Building and releasing OpenRagnar
+# Building and releasing BrowserHelm
 
 All build and packaging steps live in this repository. Codex is optional. Run on an Apple Silicon Mac with Xcode command-line tools and the standalone Python 3.12 runtime described in the root README.
 
@@ -24,28 +24,28 @@ For relocated browser and public HTTPS checks, with Neo running:
 python3 script/verify_dmg.py --live
 ```
 
-The scripts derive the image filename from the app's actual version and binary architecture. The checksum sidecar uses a relative filename and can be checked from the output directory with `shasum -a 256 -c OpenRagnar-0.4.3-arm64.dmg.sha256`.
+The scripts derive the image filename from the app's actual version and binary architecture. The checksum sidecar uses a relative filename and can be checked from the output directory with `shasum -a 256 -c BrowserHelm-0.5.1-arm64.dmg.sha256`.
 
-`build_and_run.sh` stops the GUI process before rebuilding, preserving `--mcp` processes. To build an isolated artifact without stopping the GUI or replacing `dist/OpenRagnar.app`, use:
+`build_and_run.sh` stops the GUI process before rebuilding, preserving `--mcp` processes. To build an isolated artifact without stopping the GUI or replacing `dist/BrowserHelm.app`, use:
 
 ```sh
 (cd mac-app && swift build -c release --disable-sandbox)
-OPENRAGNAR_APP_OUTPUT=/private/tmp/openragnar-test/OpenRagnar.app python3 script/stage_app.py
-./script/package_dmg.sh --app /private/tmp/openragnar-test/OpenRagnar.app --output-dir /private/tmp/openragnar-test
-python3 script/verify_dmg.py /private/tmp/openragnar-test/OpenRagnar-0.4.3-arm64.dmg
+BROWSERHELM_APP_OUTPUT=/private/tmp/browserhelm-test/BrowserHelm.app python3 script/stage_app.py
+./script/package_dmg.sh --app /private/tmp/browserhelm-test/BrowserHelm.app --output-dir /private/tmp/browserhelm-test
+python3 script/verify_dmg.py /private/tmp/browserhelm-test/BrowserHelm-0.5.1-arm64.dmg
 ```
 
-Do not point `OPENRAGNAR_APP_OUTPUT` at the installed app during active MCP tasks. It is a build destination and replaces an existing bundle there.
+Do not point `BROWSERHELM_APP_OUTPUT` at the installed app during active MCP tasks. It is a build destination and replaces an existing bundle there.
 
 ## Public releases after enrollment
 
 Install a **Developer ID Application** certificate and its private key in your macOS Keychain. List available signing identities with `security find-identity -v -p codesigning`. Use the full name of your own certificate:
 
 ```sh
-export OPENRAGNAR_SIGNING_IDENTITY='Developer ID Application: Your Legal Name (YOURTEAMID)'
+export BROWSERHELM_SIGNING_IDENTITY='Developer ID Application: Your Legal Name (YOURTEAMID)'
 ./script/build_and_run.sh --build
 ./script/package_dmg.sh
-python3 script/notarize_dmg.py dist/OpenRagnar-0.4.3-arm64.dmg --check
+python3 script/notarize_dmg.py dist/BrowserHelm-0.5.1-arm64.dmg --check
 ```
 
 The build signs every bundled Mach-O, including the Python executable and extension modules, followed by the app. Developer ID builds use Hardened Runtime and secure timestamps. The packaging step also signs the DMG. Release preflight verifies the Apple certificate requirement, signing team consistency, timestamps, Hardened Runtime and notices. Ad-hoc builds cannot pass.
@@ -53,7 +53,7 @@ The build signs every bundled Mach-O, including the Python executable and extens
 Configure a named `notarytool` Keychain profile locally using Apple's interactive credential-storage workflow:
 
 ```sh
-xcrun notarytool store-credentials openragnar-notary
+xcrun notarytool store-credentials browserhelm-notary
 ```
 
 Follow its prompts. Keep passwords, API private keys, exported signing keys and provisioning secrets out of the repository and command history. Scripts accept the profile **name**, not credentials.
@@ -61,8 +61,8 @@ Follow its prompts. Keep passwords, API private keys, exported signing keys and 
 The next command explicitly uploads the DMG to Apple. Run it only when ready to submit that artifact:
 
 ```sh
-python3 script/notarize_dmg.py dist/OpenRagnar-0.4.3-arm64.dmg --submit --profile openragnar-notary
-python3 script/verify_dmg.py dist/OpenRagnar-0.4.3-arm64.dmg --require-notarized --live
+python3 script/notarize_dmg.py dist/BrowserHelm-0.5.1-arm64.dmg --submit --profile browserhelm-notary
+python3 script/verify_dmg.py dist/BrowserHelm-0.5.1-arm64.dmg --require-notarized --live
 ```
 
 The submit script waits for Apple's `Accepted` result before stapling and validating the ticket. It regenerates the checksum because stapling changes the DMG. Rejected submissions never produce a success report. If a submission is interrupted or rejected, inspect its submission ID with `notarytool info`/`log` before submitting again; scripts never automatically resubmit.
@@ -84,12 +84,12 @@ The publish job alone receives repository write permission. It uploads the DMG, 
 For each new version, update `VERSION` and increment `BUILD` in `neo-personal/version.py`, add release notes, test and promote the commit to `main`. Then:
 
 ```sh
-git tag -a v0.4.3 -m "OpenRagnar 0.4.3 preview"
-git push origin v0.4.3
+git tag -a v0.5.1 -m "BrowserHelm 0.5.1 preview"
+git push origin v0.5.1
 ```
 
 The **Release DMG** workflow can also be run manually from Actions with an existing version tag. Use this only to recover a failed build or incomplete draft. Review its run and release assets before sharing the link. Releases in a private repository require repository access; this workflow does not change visibility.
 
-Download: [OpenRagnar Releases](https://github.com/RaDeleon/OpenRagnar/releases). GitHub-hosted macOS builds in a private repository consume the account's Actions minutes. The workflow uses a standard Apple Silicon runner, documented in [GitHub's runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+Download: [BrowserHelm Releases](https://github.com/RaDeleon/BrowserHelm/releases). GitHub-hosted macOS builds in a private repository consume the account's Actions minutes. The workflow uses a standard Apple Silicon runner, documented in [GitHub's runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
 
-On the development Mac, install each verified new version into `/Applications/OpenRagnar.app` after active MCP tasks finish, then reconnect clients and verify their reported version. A GitHub release itself does not update existing installed apps.
+On the development Mac, install each verified new version into `/Applications/BrowserHelm.app` after active MCP tasks finish, then reconnect clients and verify their reported version. A GitHub release itself does not update existing installed apps.

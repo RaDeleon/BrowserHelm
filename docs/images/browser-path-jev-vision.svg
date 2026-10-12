@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1470" viewBox="0 0 1600 1470" role="img" aria-labelledby="title desc">
+<title id="title">03  Jev + vision in one task</title><desc id="desc">Two existing tools, coordinated by Claude: navigation first, visual grounding when needed.. Includes savings mechanisms, verification and optional OpenViking memory.</desc>
+<rect width="1600" height="1470" fill="#0b121a"/>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10" fill="#57d7ed"/></marker><marker id="return" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10" fill="#8cbde4"/></marker></defs>
+<text x="64" y="52" fill="#57d7ed" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="600">BROWSERHELM / BROWSER EXECUTION</text>
+<text x="64" y="111" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="43" font-weight="600">03  Jev + vision in one task</text>
+<text x="64" y="155" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="400">Two existing tools, coordinated by Claude: navigation first, visual grounding when needed.</text>
+<text x="64" y="196" fill="#91c8a0" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400">IMPLEMENTED AS SEPARATE CALLS / NO AUTONOMOUS JEV + VISION LOOP</text>
+<text x="64" y="247" fill="#57d7ed" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="600">A / NAVIGATE: browserhelm_navigate</text>
+<rect x="64" y="270" width="270" height="108" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="82" y="289" width="4" height="25" rx="2" fill="#57d7ed"/>
+<text x="98" y="310" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Claude</text>
+<text x="86" y="346" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Delegate public navigation</text>
+<rect x="390" y="270" width="320" height="108" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="408" y="289" width="4" height="25" rx="2" fill="#57d7ed"/>
+<text x="424" y="310" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">BrowserHelm</text>
+<text x="412" y="346" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Observe + verify link + text</text>
+<rect x="770" y="270" width="290" height="108" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="788" y="289" width="4" height="25" rx="2" fill="#57d7ed"/>
+<text x="804" y="310" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Jev</text>
+<text x="792" y="346" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Bounded link choice</text>
+<rect x="1150" y="270" width="386" height="108" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="1168" y="289" width="4" height="25" rx="2" fill="#57d7ed"/>
+<text x="1184" y="310" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Neo + page</text>
+<text x="1172" y="346" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Execute via BrowserHelm</text>
+<path d="M346 322L376 322" fill="none" stroke="#57d7ed" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M722 322L756 322" fill="none" stroke="#57d7ed" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M1072 322L1136 322" fill="none" stroke="#57d7ed" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="1100" y="257" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400">choice → BrowserHelm → Neo</text>
+<path d="M1330 390V433H190V390" fill="none" stroke="#8cbde4" stroke-width="2" marker-end="url(#return)"/>
+<text x="216" y="421" fill="#8cbde4" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400">Neo → BrowserHelm verification → Claude: result + page ID; Claude chooses visual stage</text>
+<text x="64" y="493" fill="#57d7ed" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="600">B / GROUND ONE TARGET: browserhelm_visual_act</text>
+<rect x="64" y="516" width="270" height="130" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="82" y="535" width="4" height="25" rx="2" fill="#57d7ed"/>
+<text x="98" y="556" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Claude</text>
+<text x="86" y="592" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Page ID + target + point/click</text>
+<rect x="390" y="516" width="320" height="130" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="408" y="535" width="4" height="25" rx="2" fill="#57d7ed"/>
+<text x="424" y="556" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">BrowserHelm</text>
+<text x="412" y="592" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Capture through Neo</text>
+<text x="412" y="619" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Check memory + freshness</text>
+<rect x="770" y="516" width="290" height="130" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="788" y="535" width="4" height="25" rx="2" fill="#57d7ed"/>
+<text x="804" y="556" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Vision model</text>
+<text x="792" y="592" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Screenshot → coordinates</text>
+<text x="792" y="619" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Local starting path</text>
+<rect x="1150" y="516" width="386" height="130" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="1168" y="535" width="4" height="25" rx="2" fill="#57d7ed"/>
+<text x="1184" y="556" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Neo + page</text>
+<text x="1172" y="592" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Freshness guard → one click</text>
+<text x="1172" y="619" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Check requested text afterward</text>
+<path d="M346 580L376 580" fill="none" stroke="#57d7ed" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M722 580L756 580" fill="none" stroke="#57d7ed" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M1072 580L1136 580" fill="none" stroke="#57d7ed" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="1090" y="501" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400">point → BrowserHelm → Neo</text>
+<path d="M1330 660V710H190V660" fill="none" stroke="#8cbde4" stroke-width="2" marker-end="url(#return)"/>
+<text x="216" y="698" fill="#8cbde4" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400">Neo → BrowserHelm → Claude: coordinates + click/verification status + usage; no screenshot returned</text>
+<rect x="64" y="754" width="1472" height="116" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="82" y="773" width="4" height="25" rx="2" fill="#91c8a0"/>
+<text x="98" y="794" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">SAVING AT VISION: keep screenshot interpretation out of Claude’s context</text>
+<text x="86" y="830" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">The selected grounder receives the screenshot; Claude receives a compact report.</text>
+<text x="86" y="857" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Local vision avoids cloud vision API charges but consumes local compute. OpenRouter is an explicit option.</text>
+<rect x="64" y="904" width="1472" height="116" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="82" y="923" width="4" height="25" rx="2" fill="#8cbde4"/>
+<text x="98" y="944" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">SAVING ON REPEATS: verified local evidence can avoid vision inference</text>
+<text x="86" y="980" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Two independent model-grounded, text-verified clicks can qualify on the identical task and scene.</text>
+<text x="86" y="1007" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Fresh screenshots + DOM/viewport checks remain. Changed scenes miss reuse; failures revoke eligibility.</text>
+<rect x="64" y="1054" width="1472" height="116" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="82" y="1073" width="4" height="25" rx="2" fill="#91c8a0"/>
+<text x="98" y="1094" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">COST BOUNDARY: use each model only when needed</text>
+<text x="86" y="1130" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Navigation gets bounded decisions; visual targeting gets grounding. Claude coordinates the handoff.</text>
+<text x="86" y="1157" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Controlled learned visual repeats: 0.261–0.282 s, zero local inference tokens; not Claude quota savings.</text>
+<text x="64" y="1210" fill="#57d7ed" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="600">OPTIONAL MEMORY / NOT A BROWSER-ACTION HOP</text>
+<rect x="64" y="1232" width="435" height="150" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="82" y="1251" width="4" height="25" rx="2" fill="#91c8a0"/>
+<text x="98" y="1272" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Local evidence + outbox</text>
+<text x="86" y="1308" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Routes + private visual evidence</text>
+<text x="86" y="1335" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Visual coordinates remain local</text>
+<text x="86" y="1362" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Generic visual outcomes upload</text>
+<path d="M515 1290L605 1290" fill="none" stroke="#57d7ed" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="517" y="1273" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400">upload</text>
+<path d="M605 1338L515 1338" fill="none" stroke="#8cbde4" stroke-width="2" marker-end="url(#return)"/>
+<text x="518" y="1364" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400">hints</text>
+<rect x="625" y="1232" width="390" height="150" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="643" y="1251" width="4" height="25" rx="2" fill="#57d7ed"/>
+<text x="659" y="1272" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">OpenViking</text>
+<text x="647" y="1308" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Scoped outcomes + failure lessons</text>
+<text x="647" y="1335" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Navigation hints in path 2</text>
+<text x="647" y="1362" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Vector-only upload processing</text>
+<rect x="1040" y="1232" width="496" height="150" rx="14" fill="#141f2b" stroke="#39424c"/>
+<rect x="1058" y="1251" width="4" height="25" rx="2" fill="#91c8a0"/>
+<text x="1074" y="1272" fill="#edf5fa" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600">Memory savings</text>
+<text x="1062" y="1308" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Local cache avoids remote retrieval</text>
+<text x="1062" y="1335" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Proven reuse can skip inference</text>
+<text x="1062" y="1362" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Live checks still required; costs apply</text>
+<path d="M64 1391H1536" stroke="#39424c"/>
+<text x="64" y="1420" fill="#b9c1ca" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400">Savings = mechanisms, not measured Claude quota or billing reductions. 10× speed remains a target.</text>
+</svg>

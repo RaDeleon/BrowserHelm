@@ -18,7 +18,7 @@ import urllib.parse
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'neo-personal'))
 from experience import ExperienceMemory
-from openragnar import OpenRagnarGateway
+from browserhelm import BrowserHelmGateway
 from vision import DEFAULT_VISION
 from version import VERSION
 
@@ -33,9 +33,9 @@ def main():
     handler = functools.partial(QuietHandler, directory=str(ROOT / 'neo-personal/fixtures'))
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
-    with tempfile.TemporaryDirectory(prefix='openragnar-visual-learning-') as tmp:
+    with tempfile.TemporaryDirectory(prefix='browserhelm-visual-learning-') as tmp:
         root = pathlib.Path(tmp)
-        gateway = OpenRagnarGateway({'vision': {**DEFAULT_VISION, 'enabled': True}}, root/'outputs')
+        gateway = BrowserHelmGateway({'vision': {**DEFAULT_VISION, 'enabled': True}}, root/'outputs')
         memory = ExperienceMemory({'enabled': True, 'validation': True}, root/'experiences.sqlite')
         gateway.memory = memory
         counter = 0
@@ -48,7 +48,7 @@ def main():
             return response['result']
         def visual(instruction, needle, action='click'):
             started = time.monotonic()
-            result = request('tools/call', {'name': 'openragnar_visual_act', 'arguments': {
+            result = request('tools/call', {'name': 'browserhelm_visual_act', 'arguments': {
                 'page': page, 'instruction': instruction, 'action': action, 'successText': needle}})
             assert all(block.get('type') != 'image' for block in result['content'])
             text = result['content'][0]['text']
@@ -62,7 +62,7 @@ def main():
             gateway.run_browser('const p=await browser.page(%s);return (await p.evaluate(async()=>{document.querySelector("#outcome").textContent="";await document.fonts.ready;await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));return true;})).value;' % page)
         try:
             initialized = request('initialize', {'protocolVersion': '2025-11-25', 'capabilities': {},
-                'clientInfo': {'name': 'OpenRagnar visual learning validation', 'version': VERSION}})
+                'clientInfo': {'name': 'BrowserHelm visual learning validation', 'version': VERSION}})
             request('tools/list', {})
             request('tools/call', {'name': 'name_session', 'arguments': {'name': 'Vision learning', 'category': 'testing-and-qa',
                 'summary': 'Three canvas targets, repeated verified runs, moved controls and memory persistence.'}})

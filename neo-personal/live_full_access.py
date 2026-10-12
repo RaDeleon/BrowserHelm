@@ -6,7 +6,7 @@ import select
 import subprocess
 import time
 root=pathlib.Path(__file__).resolve().parent.parent
-app=root/'dist/OpenRagnar.app/Contents/MacOS/OpenRagnar'
+app=root/'dist/BrowserHelm.app/Contents/MacOS/BrowserHelm'
 p=subprocess.Popen([str(app),'--mcp'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,bufsize=1)
 serial=0
 page=None
@@ -37,17 +37,17 @@ def value(result):
     return parsed['value']
 
 try:
-    init=call('initialize',{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'OpenRagnar validation','version':'0.4.0'}})
+    init=call('initialize',{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'BrowserHelm validation','version':'0.4.0'}})
     p.stdin.write(json.dumps({'jsonrpc':'2.0','method':'notifications/initialized'})+'\n');p.stdin.flush()
     catalog=call('tools/list',{})
     tools={t['name']:t for t in catalog['tools']}
-    assert {'run','evaluate','snapshot','act','read','neo_read_output','openragnar_navigate'} <= set(tools)
-    tool('name_session',{'name':'OpenRagnar 0.3 read/write validation'})
+    assert {'run','evaluate','snapshot','act','read','neo_read_output','browserhelm_navigate'} <= set(tools)
+    tool('name_session',{'name':'BrowserHelm 0.3 read/write validation'})
     page=value(tool('run',{'code':'const p=await browser.open("https://example.com"); await p.waitForSelector("body",{timeout:8000}); return p.id;'}))
-    tool('evaluate',{'page':page,'code':'const el=document.createElement("input"); el.id="ragnar-smoke"; el.setAttribute("aria-label","OpenRagnar test input"); document.body.appendChild(el); return {created:!!document.getElementById("ragnar-smoke")};'})
+    tool('evaluate',{'page':page,'code':'const el=document.createElement("input"); el.id="ragnar-smoke"; el.setAttribute("aria-label","BrowserHelm test input"); document.body.appendChild(el); return {created:!!document.getElementById("ragnar-smoke")};'})
     snap=tool('snapshot',{'page':page})
     text='\n'.join(b.get('text','') for b in snap.get('content',[]) if b.get('type')=='text')
-    line=next((line for line in text.splitlines() if 'OpenRagnar test input' in line),'')
+    line=next((line for line in text.splitlines() if 'BrowserHelm test input' in line),'')
     ref=re.search(r'\b(e\d+)\b',line)
     if not ref: raise RuntimeError('Test input ref missing: '+text[:1800])
     schema=tools['act']['inputSchema']
@@ -55,16 +55,16 @@ try:
     # Input schema is the authority for act's fill field.
     props=schema.get('properties',{})
     args['kind' if 'kind' in props else 'action']='fill'
-    args['value']='OpenRagnar writes work'
+    args['value']='BrowserHelm writes work'
     tool('act',args)
     verified=value(tool('run',{'code':'const p=await browser.page(%s); const r=await p.evaluate(()=>({value:document.getElementById("ragnar-smoke").value})); return r.value;' % json.dumps(page)}))
-    assert verified['value']=='OpenRagnar writes work', verified
-    big=tool('run',{'code':'return "OPENRAGNAR_RECOVERY_CHECK:" + "x".repeat(20000);'})
+    assert verified['value']=='BrowserHelm writes work', verified
+    big=tool('run',{'code':'return "BROWSERHELM_RECOVERY_CHECK:" + "x".repeat(20000);'})
     preview='\n'.join(b.get('text','') for b in big.get('content',[]) if b.get('type')=='text')
     handle=re.search(r'neo_read_output\(handle=([a-zA-Z0-9_-]+)',preview)
     assert handle, 'Large output was not retained'
     recovered=tool('neo_read_output',{'handle':handle.group(1),'offset':0,'maxCharacters':2000})
-    assert 'OPENRAGNAR_RECOVERY_CHECK' in json.dumps(recovered)
+    assert 'BROWSERHELM_RECOVERY_CHECK' in json.dumps(recovered)
     report={'version':init['serverInfo']['version'],'protocol':init['protocolVersion'],'toolCount':len(tools),
             'fullToolNames':sorted(tools),'ownedPublicTabOnly':True,'granularEvaluateWrite':True,'snapshotRef':True,
             'actFillAndReadbackVerified':True,'largeOutputRecovery':True,'providerCalled':False}

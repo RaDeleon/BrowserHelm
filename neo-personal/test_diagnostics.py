@@ -14,14 +14,14 @@ from types import SimpleNamespace
 from diagnostics import Diagnostics, diagnostic_snapshot, claude_errors, classify_error, issue, runtime_processes, browser_issue
 from gateway import Gateway
 from metrics import Metrics
-from openragnar import OpenRagnarGateway
+from browserhelm import BrowserHelmGateway
 
 
 class DiagnosticsTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = pathlib.Path(self.temp.name)
-        self.g = OpenRagnarGateway({}, self.root/'outputs')
+        self.g = BrowserHelmGateway({}, self.root/'outputs')
         self.g.enable_metrics(self.root/'metrics.sqlite')
         self.g.enable_diagnostics(self.root/'diagnostics.sqlite')
         self.g.metrics.start('claude-desktop')
@@ -41,7 +41,7 @@ class DiagnosticsTests(unittest.TestCase):
         event = data['events'][0]
         row = self.g.metrics.snapshot()['requests'][0]
         self.assertEqual(event['request_id'],row['id'])
-        self.assertEqual(actual['error']['data']['openragnarRequestId'], row['id'])
+        self.assertEqual(actual['error']['data']['browserhelmRequestId'], row['id'])
         self.assertEqual(event['code'],-32603)
         self.assertEqual(data['error_count'],1)  # No duplicate legacy-counter event.
         persisted = (self.root/'diagnostics.sqlite').read_bytes() + logs.getvalue().encode() + json.dumps(data).encode()
@@ -98,7 +98,7 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertEqual(self.snapshot()['error_count'],2)
 
     def test_connection_identity_and_readonly_snapshot_do_not_create_sessions(self):
-        self.g.diagnostics.identify('local-agent-mode-openragnar','2025-11-25')
+        self.g.diagnostics.identify('local-agent-mode-browserhelm','2025-11-25')
         data = self.snapshot()
         self.assertEqual(data['connections'][0]['client'],'Claude Desktop')
         self.assertTrue(data['connections'][0]['active'])
@@ -122,7 +122,7 @@ class DiagnosticsTests(unittest.TestCase):
     def test_claude_log_projection_discards_raw_content(self):
         stamp = time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())+'.123Z'
         path = self.root/'claude.log'
-        path.write_text(stamp+' [openragnar] [info] Message from server: id=9 error(code=-32603) SECRET-KEY\n'+stamp+' [openragnar] [info] token=SECRET-KEY\n')
+        path.write_text(stamp+' [browserhelm] [info] Message from server: id=9 error(code=-32603) SECRET-KEY\n'+stamp+' [browserhelm] [info] token=SECRET-KEY\n')
         events = claude_errors(path)
         self.assertEqual(len(events),1)
         self.assertEqual(events[0]['code'],-32603)
@@ -138,10 +138,10 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertEqual(self.snapshot()['events'][0]['category'],'legacy_error')
 
     def test_process_projection_omits_unrelated_commands_and_marks_path_mismatch(self):
-        launcher = self.root/'OpenRagnar.app/Contents/MacOS/OpenRagnar'
+        launcher = self.root/'BrowserHelm.app/Contents/MacOS/BrowserHelm'
         launcher.parent.mkdir(parents=True);launcher.touch()
         fake = SimpleNamespace(stdout=f'  42 {launcher} --mcp\n  43 /bin/other --key SECRET-KEY\n')
-        processes = runtime_processes([], '/Applications/OpenRagnar.app/Contents/MacOS/OpenRagnar',lambda *a,**kw:fake)
+        processes = runtime_processes([], '/Applications/BrowserHelm.app/Contents/MacOS/BrowserHelm',lambda *a,**kw:fake)
         self.assertEqual(len(processes),1);self.assertFalse(processes[0]['matches_configured'])
         self.assertFalse(processes[0]['tracked']);self.assertIsNone(processes[0]['build_id'])
         self.assertNotIn('SECRET-KEY',json.dumps(processes))
@@ -153,10 +153,10 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertEqual(classify_error('Provider returned HTTP 429. SECRET',provider=True)['http_status'],429)
 
     def test_startup_failure_is_safe_and_diagnostics_still_readable(self):
-        from openragnar import main
+        from browserhelm import main
         settings = self.root/'bad.json'
         settings.write_text('{SECRET-INVALID-JSON')
-        argv = ['openragnar','--settings',str(settings),'--output-dir',str(self.root/'outputs')]
+        argv = ['browserhelm','--settings',str(settings),'--output-dir',str(self.root/'outputs')]
         with patch('sys.argv',argv), redirect_stderr(io.StringIO()) as logs:
             with self.assertRaises(SystemExit): main()
         self.assertNotIn('SECRET-INVALID-JSON',logs.getvalue())
@@ -174,7 +174,7 @@ class DiagnosticsTests(unittest.TestCase):
         with patch.object(Gateway,'upstream_call',return_value=response), redirect_stderr(io.StringIO()):
             actual = self.g.handle(self.request)
         self.assertEqual(actual['error']['data']['existing'],'original guidance')
-        self.assertEqual(actual['error']['data']['openragnar']['category'],'invalid_request')
+        self.assertEqual(actual['error']['data']['browserhelm']['category'],'invalid_request')
 
 
 if __name__ == '__main__': unittest.main()

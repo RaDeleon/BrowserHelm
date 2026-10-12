@@ -6,9 +6,9 @@ The target is fewer expensive planner turns and smaller context at equal task co
 
 ```mermaid
 flowchart LR
-    A[Claude / Codex: task planning] --> G[OpenRagnar gateway]
+    A[Claude / Codex: task planning] --> G[BrowserHelm gateway]
     G -->|ordinary browser tools| N[BrowserOS Neo]
-    G -->|openragnar_navigate| P[Local learning policy]
+    G -->|browserhelm_navigate| P[Local learning policy]
     P -->|two local verified successes + current link| N
     P -->|choice needed| J[Jev or selected decision provider]
     J --> N
@@ -18,7 +18,7 @@ flowchart LR
     O -->|bounded advisory recall when local cache misses| P
 ```
 
-Jev already **is a model**. OpenRagnar uses it for bounded text choices, not arbitrary browser planning or screenshot grounding. Since 0.4.4, the optional `openragnar_visual_act` tool handles screenshot grounding through a separate local vision model. Ordinary `run`, `act`, `evaluate`, etc. continue to be planned by the main agent. BrowserOS Neo executes the actual browser operations. OpenViking is persistent context and retrieval, not a browser controller or a replacement for the planner.
+Jev already **is a model**. BrowserHelm uses it for bounded text choices, not arbitrary browser planning or screenshot grounding. Since 0.4.4, the optional `browserhelm_visual_act` tool handles screenshot grounding through a separate local vision model. Ordinary `run`, `act`, `evaluate`, etc. continue to be planned by the main agent. BrowserOS Neo executes the actual browser operations. OpenViking is persistent context and retrieval, not a browser controller or a replacement for the planner.
 
 ## What changed
 
@@ -64,7 +64,7 @@ The local vision branch has a controlled canvas fixture check with Qwen3-VL 2B I
 ## Next acceptance gates
 
 1. Define a set of repeatable tasks with independently checked postconditions, covering public navigation and representative authorized read/write work.
-2. Compare main-agent browser use, Neo directly, OpenRagnar without memory, and OpenRagnar with learning from equivalent initial conditions. Use fresh chats and equivalent tool exposure; retain failed runs.
+2. Compare main-agent browser use, Neo directly, BrowserHelm without memory, and BrowserHelm with learning from equivalent initial conditions. Use fresh chats and equivalent tool exposure; retain failed runs.
 3. Measure task correctness, main-agent turns, median/tail task latency, client-reported total usage and provider-reported decision usage. Report memory costs separately; the MCP gateway cannot read Claude subscription weighting or hidden reasoning totals.
 4. Expand delegation beyond public links with explicit task boundaries and postconditions, constrained observed actions, and escalation. Generic forwarded calls must not be counted as delegated execution.
 5. Trial a specialist local grounder only on tasks needing vision; keep it only if it reduces total latency/usage at equivalent correctness.

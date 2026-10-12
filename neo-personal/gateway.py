@@ -90,7 +90,7 @@ def local_tools():
     return [
         {"name": "neo_read_output", "description": "Read bounded chunks of omitted output using its opaque handle. offset and nextOffset count Unicode characters. Only this session's stored results are accessible; output expires after one hour.",
          "inputSchema": {"type": "object", "properties": {"handle": {"type": "string"}, "offset": {"type": "integer", "minimum": 0}, "maxCharacters": {"type": "integer", "minimum": 1, "maximum": 4000}}, "required": ["handle"], "additionalProperties": False}, "annotations": {"readOnlyHint": True}},
-        {"name": "neo_help", "description": "Get original Neo instructions or tool/SDK documentation on demand. topic is instructions or a browser tool name, e.g. run.",
+        {"name": "neo_help", "description": "Get Neo or BrowserHelm tool documentation and examples. topic is instructions or a tool name, e.g. run or browserhelm_execute.",
          "inputSchema": {"type": "object", "properties": {"topic": {"type": "string"}}, "required": ["topic"], "additionalProperties": False}, "annotations": {"readOnlyHint": True}},
     ]
 
@@ -189,7 +189,7 @@ class Gateway:
                                                 if request.get("method") == "initialize" else self.protocol)
         req = urllib.request.Request(self.upstream, data=encode(request), headers=headers)
         try:
-            response = self.opener.open(req, timeout=120)
+            response = self.opener.open(req, timeout=self.request_timeout() if hasattr(self, 'request_timeout') else 120)
         except urllib.error.HTTPError as error:
             hook = getattr(self, 'transport_error', None)
             if hook:

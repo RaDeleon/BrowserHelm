@@ -8,7 +8,7 @@ import unittest
 
 
 NODE = shutil.which('node')
-SOURCE = Path(__file__).resolve().parents[1] / 'neo-personal/openragnar.py'
+SOURCE = Path(__file__).resolve().parents[1] / 'neo-personal/browserhelm.py'
 
 
 @unittest.skipUnless(NODE, 'Node is needed to execute the page-side JavaScript tests')

@@ -7,7 +7,7 @@ import time
 import unittest
 from unittest.mock import patch
 from gateway import Gateway
-from openragnar import OpenRagnarGateway, load_settings
+from browserhelm import BrowserHelmGateway, load_settings
 from metrics import Metrics, NeoReader, digest, text_size, usage_tokens
 
 class MetricsTests(unittest.TestCase):
@@ -93,15 +93,15 @@ class MetricsTests(unittest.TestCase):
         rows['dispatches'].append({'toolName':'run','createdAt':100005,'dispatchKey':'root2'})
         with patch.object(n,'get',return_value=rows): self.assertIsNone(n.request_moves('opaque',100,100.1,'run'))
     def test_no_key_helper_is_used_for_regular_tools(self):
-        g=OpenRagnarGateway({'provider':'typesafe'},pathlib.Path(self.temp.name)/'outputs')
-        with patch.dict(os.environ,{'OPENRAGNAR_KEY_HELPER':'/not-the-app'}), patch('openragnar.subprocess.run') as helper, patch.object(Gateway,'upstream_call',return_value={'result':{'content':[]}}):
+        g=BrowserHelmGateway({'provider':'typesafe'},pathlib.Path(self.temp.name)/'outputs')
+        with patch.dict(os.environ,{'BROWSERHELM_KEY_HELPER':'/not-the-app'}), patch('browserhelm.subprocess.run') as helper, patch.object(Gateway,'upstream_call',return_value={'result':{'content':[]}}):
             g.handle({'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'evaluate','arguments':{}}})
             helper.assert_not_called()
             with self.assertRaises(ValueError): g.provider()
             helper.assert_not_called()
         g.moves_pool.shutdown();g.artifacts.cleanup()
     def test_metrics_failure_does_not_repeat_write(self):
-        g=OpenRagnarGateway({},pathlib.Path(self.temp.name)/'outputs');g.metrics=self.m
+        g=BrowserHelmGateway({},pathlib.Path(self.temp.name)/'outputs');g.metrics=self.m
         request={'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'evaluate','arguments':{'page':1,'code':'document.body.dataset.test="yes"'}}}
         response={'jsonrpc':'2.0','id':2,'result':{'content':[{'type':'text','text':'written'}]}}
         with patch.object(Gateway,'upstream_call',return_value=response) as upstream, patch.object(self.m,'record',side_effect=OSError):
@@ -109,7 +109,7 @@ class MetricsTests(unittest.TestCase):
         self.assertEqual(upstream.call_count,1);self.assertFalse(actual.get('error'));self.assertTrue(g.metric_error)
         g.moves_pool.shutdown();g.artifacts.cleanup()
     def test_forwarded_write_and_full_catalog_are_available_by_default(self):
-        g=OpenRagnarGateway({},pathlib.Path(self.temp.name)/'outputs');g.metrics=self.m
+        g=BrowserHelmGateway({},pathlib.Path(self.temp.name)/'outputs');g.metrics=self.m
         request={'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'evaluate','arguments':{'page':1,'code':'document.body.dataset.test="yes"'}}}
         response={'jsonrpc':'2.0','id':2,'result':{'content':[{'type':'text','text':'written'}]}}
         with patch.object(Gateway,'upstream_call',return_value=response) as upstream: actual=g.handle(request)
@@ -117,13 +117,13 @@ class MetricsTests(unittest.TestCase):
         self.assertEqual(self.m.snapshot()['totals']['upstream_calls'],1)
         catalog={'result':{'tools':[{'name':n,'description':'text','inputSchema':{'type':'object'}} for n in ['run','act','evaluate','snapshot']]}}
         names={t['name'] for t in g.transform({'method':'tools/list'},catalog)['result']['tools']}
-        self.assertTrue({'act','evaluate','snapshot','run','openragnar_navigate'} <= names)
+        self.assertTrue({'act','evaluate','snapshot','run','browserhelm_navigate'} <= names)
         g.moves_pool.shutdown();g.artifacts.cleanup()
     def test_paid_attempt_without_usage_is_unknown_and_escalated(self):
         settings={'provider':'ollama','providers':{'ollama':{'endpoint':'http://localhost:11434/v1','model':'test'}}}
-        g=OpenRagnarGateway(settings,pathlib.Path(self.temp.name)/'outputs');g.metrics=self.m
+        g=BrowserHelmGateway(settings,pathlib.Path(self.temp.name)/'outputs');g.metrics=self.m
         state={'url':'https://example.com/','title':'Example','found':False,'links':[{'url':'https://example.com/docs','label':'Docs'}]}
-        request={'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'openragnar_navigate','arguments':{'startUrl':'https://example.com','goal':'Find docs','successText':'target phrase','maxSteps':1}}}
+        request={'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'browserhelm_navigate','arguments':{'startUrl':'https://example.com','goal':'Find docs','successText':'target phrase','maxSteps':1}}}
         with patch.object(g,'run_browser',return_value='owned'), patch.object(g,'observe',return_value=state), patch('decision.DecisionProvider.choose',side_effect=ValueError('Provider failed')) as paid:
             g.handle(request)
         d=self.m.snapshot(); self.assertEqual(paid.call_count,1)
@@ -132,10 +132,10 @@ class MetricsTests(unittest.TestCase):
         g.moves_pool.shutdown();g.artifacts.cleanup()
     def test_provider_reported_totals_recorded_once(self):
         settings={'provider':'ollama','providers':{'ollama':{'endpoint':'http://localhost:11434/v1','model':'test'}}}
-        g=OpenRagnarGateway(settings,pathlib.Path(self.temp.name)/'outputs');g.metrics=self.m
+        g=BrowserHelmGateway(settings,pathlib.Path(self.temp.name)/'outputs');g.metrics=self.m
         state={'url':'https://example.com/','title':'Example','found':False,'links':[{'url':'https://example.com/docs','label':'Docs'}]}
         decision={'choice':'BLOCKED','probability':None,'usage':{'input_tokens':10,'output_tokens':4},'model':'test'}
-        request={'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'openragnar_navigate','arguments':{'startUrl':'https://example.com','goal':'Find docs','successText':'target phrase','maxSteps':1}}}
+        request={'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'browserhelm_navigate','arguments':{'startUrl':'https://example.com','goal':'Find docs','successText':'target phrase','maxSteps':1}}}
         with patch.object(g,'run_browser',return_value='owned'), patch.object(g,'observe',return_value=state), patch('decision.DecisionProvider.choose',return_value=decision): g.handle(request)
         d=self.m.snapshot(); self.assertEqual(d['totals']['provider_calls'],1); self.assertEqual(d['totals']['provider_tokens'],14)
         self.assertEqual(d['totals']['provider_unknown'],0)

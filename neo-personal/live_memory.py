@@ -5,7 +5,7 @@ import tempfile
 import time
 from unittest.mock import patch
 from experience import ExperienceMemory
-from openragnar import OpenRagnarGateway
+from browserhelm import BrowserHelmGateway
 
 class ValidationSelector:
     kind='validation (deterministic; no LLM)'
@@ -14,14 +14,14 @@ class ValidationSelector:
         return {'choice':choice,'probability':None,'evidence':'deterministic public API-link validation','usage':{},'model':'no model','latencySeconds':0}
 
 root=pathlib.Path(__file__).resolve().parent.parent
-support=pathlib.Path.home()/'Library/Application Support/OpenRagnar'
+support=pathlib.Path.home()/'Library/Application Support/BrowserHelm'
 settings=json.loads((support/'settings.json').read_text())
-g=OpenRagnarGateway(settings,support/'outputs')
+g=BrowserHelmGateway(settings,support/'outputs')
 g.memory=ExperienceMemory(settings.get('memory',{}),support/'experiences.sqlite')
-args={'startUrl':'https://docs.typesafe.ai/models','goal':'OpenRagnar validation: find the API reference describing choice-answer probabilities','successText':'floats that sum to 1','maxSteps':2}
+args={'startUrl':'https://docs.typesafe.ai/models','goal':'BrowserHelm validation: find the API reference describing choice-answer probabilities','successText':'floats that sum to 1','maxSteps':2}
 page=None
 try:
-    init=g.handle({'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'OpenRagnar memory validation','version':'0.4.0'}}})
+    init=g.handle({'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'BrowserHelm memory validation','version':'0.4.0'}}})
     assert 'error' not in init,init
     g.handle({'jsonrpc':'2.0','method':'notifications/initialized'})
     with patch.object(g,'provider',return_value=ValidationSelector()):

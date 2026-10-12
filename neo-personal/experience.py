@@ -124,7 +124,7 @@ class ExperienceMemory:
             raise ValueError('Invalid OpenViking endpoint')
         if p.scheme != 'https' and not (p.scheme == 'http' and p.hostname in ('localhost','127.0.0.1','::1')):
             raise ValueError('OpenViking requires HTTPS or a local endpoint')
-        headers = {'Content-Type': 'application/json', 'User-Agent': 'openragnar/0.4.2'}
+        headers = {'Content-Type': 'application/json', 'User-Agent': 'browserhelm/0.5.0'}
         if c.get('api_key'):
             headers['Authorization'] = 'Bearer ' + c['api_key']
         # Match the installed plugin: identity headers only in trusted mode.
@@ -287,7 +287,7 @@ class ExperienceMemory:
                 'scope': 'identical tool arguments; MCP request outcome only'}
 
     def capture_tool(self, tool, arguments, row, hint_shown=False):
-        if not self.enabled or tool.startswith('openragnar_'): return
+        if not self.enabled or tool.startswith(('openragnar_', 'browserhelm_')): return
         from diagnostics import issue
         category = issue((row.get('diagnostic') or {}).get('category', 'ok'))['category']
         identifier = row['id']
@@ -386,7 +386,7 @@ class ExperienceMemory:
         document = {'schema':2, 'source':'openragnar', 'kind':'navigation', 'id':identifier, 'created':time.time(),
               'test':test or 'validation' in str(report.get('provider','')).lower(), 'host':urllib.parse.urlsplit(start).netloc, 'start':safe_url(start),
             'goal':clean(goal), 'successText':clean(needle,200), 'verified':report.get('verified') is True,
-            'verification':'literal successText presence only', 'status':report.get('status'),
+            'verification':clean(report.get('verificationScope','literal successText presence only'),200), 'status':report.get('status'),
             'provider':clean(report.get('provider',''),60), 'browserCalls':report.get('browserCalls',0),
             'model':clean((report.get('decisions') or [{}])[-1].get('model',''),100),
               'elapsedSeconds':report.get('elapsedSeconds'),

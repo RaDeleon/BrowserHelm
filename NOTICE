@@ -1,7 +1,7 @@
-OpenRagnar
-Copyright 2026 RaDeleon and OpenRagnar contributors.
+BrowserHelm
+Copyright 2026 RaDeleon and BrowserHelm contributors.
 
-Original OpenRagnar source is licensed under Apache License, Version 2.0.
+Original BrowserHelm source is licensed under Apache License, Version 2.0.
 See LICENSE. Third-party components retain their own licenses.
 
 Packaged apps contain a Python-build-standalone runtime. Python and compiled
@@ -9,7 +9,7 @@ component notices are retained at:
 Contents/Resources/runtime/lib/python3.12/LICENSE.txt
 
 BrowserOS Neo and OpenViking are independently installed external services.
-Their source and binaries are not included in the OpenRagnar app bundle.
+Their source and binaries are not included in the BrowserHelm app bundle.
 Product names identify compatibility and do not imply endorsement.
 
 See THIRD_PARTY_NOTICES.md for upstream references and attribution.

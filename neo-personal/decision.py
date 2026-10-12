@@ -36,9 +36,9 @@ class DecisionProvider:
             raise ValueError("Select a supported decision provider")
         self.kind, self.endpoint, self.model, self.api_key = kind, validate_endpoint(endpoint), model.strip(), api_key
         if not self.model:
-            raise ValueError("Enter the model ID in OpenRagnar Settings")
+            raise ValueError("Enter the model ID in BrowserHelm Settings")
         if kind in ("typesafe", "openrouter") and not api_key:
-            raise ValueError("Save this provider's API key in OpenRagnar Settings")
+            raise ValueError("Save this provider's API key in BrowserHelm Settings")
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
 
     def post(self, path, payload):
@@ -47,7 +47,10 @@ class DecisionProvider:
             headers["Authorization"] = "Bearer " + self.api_key
         request = urllib.request.Request(self.endpoint + path, data=encode(payload), headers=headers)
         try:
-            with self.opener.open(request, timeout=30) as response:
+            remaining = getattr(self, 'deadline', None)
+            if remaining is not None and remaining <= time.monotonic():
+                raise ValueError('Decision elapsed-time budget reached')
+            with self.opener.open(request, timeout=min(30, remaining-time.monotonic()) if remaining is not None else 30) as response:
                 data = response.read(1024 * 1024 + 1)
             if len(data) > 1024 * 1024:
                 raise ValueError("Decision response exceeds limit")
