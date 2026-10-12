@@ -8,11 +8,15 @@ from unittest.mock import patch
 from migration import (OLD_COMMAND, NEW_COMMAND, migrate_codex_text, migrate_json_text,
                        migrate_support, atomic_update)
 from browserhelm import BrowserHelmGateway
+try:
+    import tomllib
+except ImportError:
+    tomllib = None
 
 
 class MigrationTests(unittest.TestCase):
+    @unittest.skipIf(tomllib is None, 'Packaged Python 3.12 provides tomllib')
     def test_codex_preserves_unrelated_bytes_disabled_state_and_nested_tool_settings(self):
-        import tomllib
         text = '# private config\nmodel="keep"\n[mcp_servers.neo]\nurl="http://localhost:9010/mcp"\n[mcp_servers.openragnar]\ncommand='+json.dumps(OLD_COMMAND)+'\nargs=["--mcp"]\nenabled=false\nstartup_timeout_sec=40\n[mcp_servers.openragnar.tools.run]\nenabled=true\n[projects."/other"]\ntrust_level="trusted"\n'
         updated = migrate_codex_text(text)
         old, new = tomllib.loads(text), tomllib.loads(updated)
