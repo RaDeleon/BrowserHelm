@@ -32,3 +32,10 @@ For structural codebase exploration, use the installed `codebase-memory` skill.
 - For every validated BrowserHelm version update, commit and push the release source and publish a GitHub release with matching version tag, release notes, verified installer and checksum. A local build/install alone does not complete a release.
 - Keep generated captures, private settings, metrics, credentials and local experiment outputs out of commits and release assets.
 - Identify preview/ad-hoc signing and notarization status accurately. Verify the published tag, source commit and downloadable assets before reporting publication complete.
+
+## Public repository privacy
+
+- This repository is public. Keep credentials, client/account information, browser profiles/cookies, raw telemetry, screenshots, generated images, backups and private working notes local and ignored.
+- Enforce exclusions in both `.gitignore` and `script/artifact_policy.py`; run the staged secret/artifact check before commits and inspect release asset contents before publication.
+- `.gitignore` does not protect tracked files or remove history. Check tracked content separately. If sensitive content is discovered in published history, report it without printing secrets and coordinate remediation; do not silently rewrite history.
+- Publish only source, synthetic fixtures, intentionally public assets and sanitized documentation. Never treat example filenames as permission to publish real credentials.

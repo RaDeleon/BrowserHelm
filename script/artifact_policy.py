@@ -9,15 +9,21 @@ LOCAL_DIRECTORIES = {
     '.local', 'local-data', 'data', 'node_modules', '.pytest_cache', '.mypy_cache',
     '.ruff_cache', '.tox', '.tools', '.claude', '.codex', '.openviking',
     '.browserhelm', '.openragnar', 'agents-output',
+    'generated_images', 'private', 'secrets', 'credentials', 'backups',
+    '.agents', '.aws', '.ssh', '.azure', '.gcloud', '.auth',
+    'browser-profiles', 'user-data',
 }
 LOCAL_PATTERNS = (
     '*.log', '*.log.*', '*.jsonl', '*.ndjson', '*.har', '*.trace', '*.crash', '*.ips',
     '*.core', '*.db', '*.db-*', '*.sqlite', '*.sqlite-*', '*.sqlite3', '*.sqlite3-*',
     '*.bak', '*.backup', '*.orig', '*.profraw', '*.profdata', '*.gcda', '*.gcno',
     '*.xcresult', '*.dSYM', '*.gitleaks.json', '.coverage', '.coverage.*',
+    '*.keychain', '*.keychain-db', '*.mobileprovision', '*.provisionprofile', '*.p8',
+    'service-account*.json', 'client_secret*.json', 'storage-state*.json', 'storageState*.json',
     'screenshot*.png', 'screenshot*.jpg', 'Screenshot *.png',
 )
-PRIVATE_NAMES = {'settings.json', 'ovcli.conf', 'ov.conf'}
+PRIVATE_NAMES = {'settings.json', 'ovcli.conf', 'ov.conf', 'credentials.json',
+                 'cookies.json', 'cookies.txt', 'id_rsa', 'id_ed25519'}
 BENCHMARK_OUTPUT_NAMES = {
     'preflight.json', 'results.json', 'results.csv', 'progress.json',
     'comparison.json', 'usage.json', 'provenance.json', 'metrics.json',
@@ -26,6 +32,8 @@ BENCHMARK_OUTPUT_NAMES = {
 
 def is_private_artifact(path):
     path = pathlib.PurePosixPath(str(path))
+    if '.config/gcloud' in path.as_posix():
+        return True
     if any(part in LOCAL_DIRECTORIES for part in path.parts):
         return True
     if any(fnmatch.fnmatchcase(part, pattern) for part in path.parts for pattern in LOCAL_PATTERNS):
