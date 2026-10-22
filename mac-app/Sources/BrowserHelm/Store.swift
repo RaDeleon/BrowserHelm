@@ -72,11 +72,12 @@ import OSLog
         } catch { status = error.localizedDescription }
     }
     func refreshKey() { storedKey = Keys.has(config.provider); key = "" }
-    func refreshVisionKey() { storedVisionKey = Keys.has("openrouter"); visionKey = "" }
+    var visionKeyAccount: String? { ["openrouter", "typesafe"].contains(config.vision.provider) ? config.vision.provider : nil }
+    func refreshVisionKey() { storedVisionKey = visionKeyAccount.map { Keys.has($0) } ?? false; visionKey = "" }
     func selectVisionProvider(_ provider: String) {
         config.vision.selectProvider(provider)
-        // Keep a typed key when switching providers before saving.
-        storedVisionKey = Keys.has("openrouter")
+        // Never carry a typed credential across provider boundaries.
+        refreshVisionKey()
     }
     func checkDiagnosticsConnection() {
         guard !busy else { return }
@@ -90,11 +91,11 @@ import OSLog
     }
     @discardableResult func save() -> Bool {
         do {
-            if config.provider == "openrouter" && !key.isEmpty && !visionKey.isEmpty && key.trimmingCharacters(in: .whitespacesAndNewlines) != visionKey.trimmingCharacters(in: .whitespacesAndNewlines) {
-                throw AppError(text: "Decision and vision share the saved OpenRouter key. Enter the same key in both fields, or fill only one.")
+            if config.provider == visionKeyAccount && !key.isEmpty && !visionKey.isEmpty && key.trimmingCharacters(in: .whitespacesAndNewlines) != visionKey.trimmingCharacters(in: .whitespacesAndNewlines) {
+                throw AppError(text: "Decision and vision share the selected provider’s saved key. Enter the same key in both fields, or fill only one.")
             }
             if config.provider != "none" && !key.isEmpty { try Keys.save(key.trimmingCharacters(in: .whitespacesAndNewlines), account: config.provider) }
-            if !visionKey.isEmpty { try Keys.save(visionKey.trimmingCharacters(in: .whitespacesAndNewlines), account: "openrouter") }
+            if let account = visionKeyAccount, !visionKey.isEmpty { try Keys.save(visionKey.trimmingCharacters(in: .whitespacesAndNewlines), account: account) }
             config.vision.profiles[config.vision.provider] = Profile(endpoint: config.vision.endpoint, model: config.vision.model)
             try config.save(); refreshKey(); refreshVisionKey(); logger.info("Gateway settings saved")
             status = "Settings saved. Delegation off blocks new delegated requests immediately. Reconnect after changing delegation or task markers, first enabling vision or changing the decision provider."
@@ -102,7 +103,10 @@ import OSLog
         } catch { status = error.localizedDescription; return false }
     }
     func removeKey() { do { try Keys.remove(config.provider); refreshKey(); refreshVisionKey(); status = "API key removed." } catch { status = error.localizedDescription } }
-    func removeVisionKey() { do { try Keys.remove("openrouter"); refreshVisionKey(); refreshKey(); status = "Shared OpenRouter key removed." } catch { status = error.localizedDescription } }
+    func removeVisionKey() {
+        guard let account = visionKeyAccount else { return }
+        do { try Keys.remove(account); refreshVisionKey(); refreshKey(); status = "Shared provider key removed." } catch { status = error.localizedDescription }
+    }
     func test(_ mode: String) {
         guard save() else { return }; busy = true; status = "Checking connection…"
         DispatchQueue.global().async {

@@ -41,7 +41,13 @@ struct NeoSession: Decodable, Identifiable {
 struct NeoSnapshot: Decodable {
     var available: Bool; var stats: NeoStats?; var sessions: [NeoSession]?; var hasMore: Bool?; var error: String?
 }
+struct MeasurementCoverage: Decodable {
+    var toolCalls: Int; var trackedCalls: Int; var failedCalls: Int
+    var tasks: Int; var benchmarks: Int; var providerRecords: Int; var validationCalls: Int
+    var paths: [String: Int]
+}
 struct Dashboard: Decodable {
+    var coverage: MeasurementCoverage?
     var tasks: [PromptTask]?
     var diagnostics: DiagnosticsSnapshot?
     var memory: MemorySnapshot?
@@ -51,7 +57,7 @@ struct Dashboard: Decodable {
 }
 struct MemoryExperience: Decodable, Identifiable {
     var id: String; var goal: String; var verified: Bool; var created: Double; var synced: Bool
-    var kind: String?; var status: String?; var failureCategory: String?; var test: Bool?
+    var provenance: String?; var kind: String?; var status: String?; var failureCategory: String?; var test: Bool?
 }
 struct MemorySnapshot: Decodable {
     var enabled: Bool; var endpoint: String; var collection: String; var connection: String

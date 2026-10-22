@@ -4,10 +4,12 @@ MODE="${1:-run}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$ROOT_DIR/dist/BrowserHelm.app"
 # Never stop a --mcp child that an active agent may be using.
+if [[ "$MODE" != "--build" ]]; then
 for pid in $(pgrep -x BrowserHelm || true); do
   args=$(ps -p "$pid" -o args=)
   if [[ "$args" != *"--mcp"* ]]; then kill "$pid" || true; fi
 done
+fi
 export CLANG_MODULE_CACHE_PATH="$ROOT_DIR/mac-app/.build/module-cache"
 export SWIFTPM_MODULECACHE_OVERRIDE="$CLANG_MODULE_CACHE_PATH"
 cd "$ROOT_DIR/mac-app"

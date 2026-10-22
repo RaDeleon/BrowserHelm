@@ -43,10 +43,12 @@ struct VisionConfiguration: Codable {
     var endpoint = "http://127.0.0.1:11434"
     var model = "qwen3-vl:2b-instruct"
     var profiles: [String: Profile] = [:]
+    var minConfidence = 0.9
     static let defaults: [String: Profile] = [
         "ollama": Profile(endpoint: "http://127.0.0.1:11434", model: "qwen3-vl:2b-instruct"),
         "lmstudio": Profile(endpoint: "http://127.0.0.1:1234/v1", model: ""),
-        "openrouter": Profile(endpoint: "https://openrouter.ai/api/v1", model: "qwen/qwen3.8-flash")]
+        "openrouter": Profile(endpoint: "https://openrouter.ai/api/v1", model: "deepseek/deepseek-v4.1-flash"),
+        "typesafe": Profile(endpoint: "https://api.typesafe.ai/v1", model: "jev-1.14.0")]
     init() {}
     mutating func selectProvider(_ next: String) {
         guard let fallback = Self.defaults[next] else { return }
@@ -54,10 +56,11 @@ struct VisionConfiguration: Codable {
         let profile = profiles[next] ?? fallback
         provider = next; endpoint = profile.endpoint; model = profile.model
     }
-    enum CodingKeys: String, CodingKey { case enabled, provider, endpoint, model, profiles }
+    enum CodingKeys: String, CodingKey { case enabled, provider, endpoint, model, profiles, minConfidence }
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         enabled = try values.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        minConfidence = try values.decodeIfPresent(Double.self, forKey: .minConfidence) ?? 0.9
         provider = try values.decodeIfPresent(String.self, forKey: .provider) ?? "ollama"
         let fallback = Self.defaults[provider] ?? Self.defaults["ollama"]!
         endpoint = try values.decodeIfPresent(String.self, forKey: .endpoint) ?? fallback.endpoint
@@ -77,7 +80,7 @@ struct Configuration: Codable {
     var memory = MemoryConfiguration()
     var vision = VisionConfiguration()
     var providers: [String: Profile] = [
-        "typesafe": Profile(endpoint: "https://api.typesafe.ai/v1", model: "jev-latest"),
+        "typesafe": Profile(endpoint: "https://api.typesafe.ai/v1", model: "jev-1.13.0"),
         "openrouter": Profile(endpoint: "https://openrouter.ai/api/v1", model: ""),
         "ollama": Profile(endpoint: "http://127.0.0.1:11434/v1", model: ""),
         "lmstudio": Profile(endpoint: "http://127.0.0.1:1234/v1", model: ""),

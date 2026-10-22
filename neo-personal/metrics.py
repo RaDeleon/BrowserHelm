@@ -7,7 +7,9 @@ import json
 import math
 import os
 import pathlib
+import re
 import sqlite3
+from sqlite_support import ClosingConnection
 import time
 import urllib.parse
 import urllib.request
@@ -89,7 +91,7 @@ class Metrics:
         os.chmod(self.path, 0o600)
 
     def db(self):
-        db = sqlite3.connect(str(self.path), timeout=1.0)
+        db = sqlite3.connect(str(self.path), timeout=1.0, factory=ClosingConnection)
         db.row_factory = sqlite3.Row
         return db
 
@@ -157,13 +159,34 @@ class Metrics:
               GROUP BY s.id ORDER BY s.started DESC LIMIT 100''')]
             requests = [dict(r) for r in db.execute('SELECT * FROM requests ORDER BY started DESC LIMIT 1000')]
             benchmarks = [dict(r) for r in db.execute('SELECT * FROM benchmarks')]
+            coverage = dict(db.execute("""SELECT COUNT(*) tool_calls,
+                COALESCE(SUM(r.task_id IN (SELECT id FROM tasks)),0) tracked_calls,
+                COALESCE(SUM(r.status='error'),0) failed_calls
+                FROM requests r WHERE r.method='tools/call'""").fetchone())
+            coverage.update(tasks=db.execute('SELECT COUNT(*) FROM tasks').fetchone()[0],
+                benchmarks=len(benchmarks), provider_records=db.execute('SELECT COUNT(*) FROM provider_usage').fetchone()[0])
+            paths = {'direct': 0, 'delegated': 0, 'vision': 0, 'local': 0}
+            validation_calls = 0
+            for row in db.execute("""SELECT r.tool,s.client,COUNT(*) n FROM requests r
+                    JOIN sessions s ON s.id=r.session_id WHERE r.method='tools/call' GROUP BY r.tool,s.client"""):
+                client = (row['client'] or '').lower()
+                if re.search(r'(^|[^a-z])(test|validation)([^a-z]|$)|live check', client):
+                    validation_calls += row['n']
+                    continue
+                tool = row['tool'] or ''
+                kind = ('vision' if tool.endswith('_visual_act') else
+                        'delegated' if tool.endswith(('_execute','_navigate')) else
+                        'local' if tool.startswith(('browserhelm_', 'openragnar_', 'neo_')) else 'direct')
+                paths[kind] += row['n']
+            coverage.update(validation_calls=validation_calls, paths=paths)
+
         for session in sessions:
             try:
                 os.kill(session.pop('pid'),0)
                 session['active'] = not bool(session['closed'])
             except (OSError, KeyError):
                 session['active'] = False
-        return {'tasks':self.tasks.snapshot(),'totals':totals,'sessions':sessions,'requests':requests,'benchmarks':benchmarks,
+        return {'coverage':coverage,'tasks':self.tasks.snapshot(),'totals':totals,'sessions':sessions,'requests':requests,'benchmarks':benchmarks,
                 'retentionDays':90,'requestLimit':1000,'sessionLimit':100,'updatedAt':time.time()}
 
 

@@ -101,7 +101,7 @@ def app_metadata(app):
 
 ENGINE_FILES = {
     'gateway.py', 'decision.py', 'vision.py', 'executor.py', 'browserhelm.py',
-    'openragnar.py', 'launch.py', 'metrics.py', 'task_metrics.py', 'client_setup.py',
+    'openragnar.py', 'launch.py', 'metrics.py', 'task_metrics.py', 'sqlite_support.py', 'client_setup.py',
     'migration.py', 'experience.py', 'diagnostics.py', 'version.py', 'vision-models.json',
 }
 RESOURCE_ENTRIES = {'engine', 'runtime', 'README.md', 'LICENSE', 'NOTICE', 'AppIcon.icns', 'AppIcon.png'}

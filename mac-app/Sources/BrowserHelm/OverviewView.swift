@@ -25,6 +25,19 @@ struct DashboardView: View {
                         MetricCard(title: "Context reduction", value: "~" + number(estimate(d.totals.netTextSaved)), note: savingsNote(d.totals), symbol: "arrow.down.right")
                         MetricCard(title: "Provider usage", value: providerValue(d.totals), note: providerNote(d.totals), symbol: "cpu", tint: HelmTheme.ink)
                     }
+                    if let c = d.coverage {
+                        GroupBox("Measurement coverage") {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("\(number(c.trackedCalls)) of \(number(c.toolCalls)) tool calls linked to tasks · \(c.tasks) tasks · \(c.benchmarks) benchmark entries")
+                                Text("Direct: \(c.paths["direct", default: 0]) · Delegated: \(c.paths["delegated", default: 0]) · Vision: \(c.paths["vision", default: 0]) · Local helpers: \(c.paths["local", default: 0])")
+                                Text("Path counts exclude \(c.validationCalls) calls from clients named as tests or validation. Other clients can still include tests. Connection handshakes are excluded. Request acceptance does not establish task success.")
+                                    .font(.caption).foregroundStyle(.secondary)
+                                Text("\(c.providerRecords) detailed provider records. Missing main-agent usage or costs remain unknown; these counts do not prove speed or cost savings.")
+                                    .font(.caption).foregroundStyle(.secondary)
+                                Button("Track a task") { store.selectedTab = 6 }
+                            }.padding(8).frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
                     ContextSavingsPanel(totals: d.totals)
                     RecentContextChart(requests: d.requests)
                     HStack(alignment: .top, spacing: 16) {

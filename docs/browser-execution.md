@@ -50,13 +50,13 @@ Claude makes one `browserhelm_navigate` call with `startUrl`, a bounded `goal`, 
 
 ![Claude-coordinated Jev and vision workflow with savings annotations](images/browser-path-jev-vision.png)
 
-For example, Claude can use Jev-assisted navigation to reach a public page, receive that result and its page ID, then request a visual target that current DOM references cannot identify. `browserhelm_navigate` never invokes vision; `browserhelm_visual_act` never invokes Jev. This pattern has an intermediate return to Claude.
+For example, Claude can use Jev-assisted navigation to reach a public page, receive that result and its page ID, then request a visual target that current DOM references cannot identify. `browserhelm_navigate` never invokes vision; `browserhelm_visual_act` uses the selected vision provider, which can now be experimental Jev image grounding (0.5.2). It does not invoke the navigation decision adapter. This pattern has an intermediate return to Claude.
 
 The navigation stage follows path 2. In the visual stage:
 
 1. Claude calls `browserhelm_visual_act` with a page ID, target instruction, `action: point` or `action: click`, and optionally `successText`. `point` is the default and sends no click.
 2. BrowserHelm obtains current URL/DOM/viewport metadata through Neo. For a click with expected text already present, it returns without clicking or earning learning credit.
-3. Neo captures a screenshot for BrowserHelm. Eligible identical-task/scene evidence is checked locally before inference. Otherwise, the selected vision model receives the screenshot and target instruction. Local Ollama/LM Studio is the starting path; explicitly selected OpenRouter sends the screenshot to the cloud provider.
+3. Neo captures a screenshot for BrowserHelm. Eligible identical-task/scene evidence is checked locally before inference. Otherwise, the selected vision model receives the screenshot and target instruction. Local Ollama/LM Studio is the starting path; explicitly selected OpenRouter or TypeSafe sends the screenshot to that cloud provider. Jev image grounding combines unique-target probability and box-confidence checks in one request; see [vision setup](local-vision.md).
 4. Vision returns `found` and normalized coordinates. BrowserHelm validates them and converts them to CSS viewport pixels. Vision supplies grounding, not a task plan or a browser action.
 5. Before a click, BrowserHelm captures again and checks scene/target pixels. Neo also rechecks DOM/viewport state immediately before dispatch. Changed evidence returns a stale result. Freshness checks narrow risk but do not make a browser click atomic.
 6. For `click`, Neo sends one explicitly requested click. If a success phrase was supplied, BrowserHelm waits for that text and reports whether it appeared. Without it, a dispatched click stays unverified. A failure never triggers a blind repeat click.

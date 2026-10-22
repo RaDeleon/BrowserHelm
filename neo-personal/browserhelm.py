@@ -25,7 +25,7 @@ TASK_TOOL = {"name":"browserhelm_task","description":"Optional task tracking (ad
 
 NAV_TOOL = {"name": "browserhelm_navigate", "description": "Delegate a bounded public-page navigation task to the decision provider selected in BrowserHelm Settings. Opens its own tab, follows observed same-origin links, verifies successText locally. No forms/buttons. Cloud providers receive goal, URLs and link labels. Returns verified completion or escalation with provider usage; no automatic retry. Dry run proposes one link without following it.", "inputSchema": {"type": "object", "properties": {"startUrl": {"type": "string"}, "goal": {"type": "string", "maxLength": 500}, "successText": {"type": "string", "minLength": 4, "maxLength": 200}, "maxSteps": {"type": "integer", "minimum": 1, "maximum": 6, "default": 4}, "dryRun": {"type": "boolean", "default": False}}, "required": ["startUrl", "goal", "successText"], "additionalProperties": False}}
 STATUS_TOOL = {"name": "browserhelm_status", "description": "Show decision provider, model and gateway settings, without API keys. No provider call.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}, "annotations": {"readOnlyHint": True}}
-VISION_TOOL = {"name": "browserhelm_visual_act", "description": "Screenshot-to-point grounding with the vision provider selected in BrowserHelm Settings: local Ollama/LM Studio or cloud OpenRouter. OpenRouter receives the screenshot and target instruction. Use when DOM refs cannot identify a visual target. Returns compact CSS coordinates, provider usage and latency, never the image. action=point proposes only; action=click performs one explicit click after checking the page has not changed. Optional successText checks text presence, not business completion. No retry or automatic provider switch. Inspect state after an error before another click.", "inputSchema": {"type": "object", "properties": {"page": {"type": "integer", "minimum": 1}, "instruction": {"type": "string", "minLength": 1, "maxLength": 500}, "action": {"type": "string", "enum": ["point", "click"], "default": "point"}, "successText": {"type": "string", "minLength": 4, "maxLength": 200}}, "required": ["page", "instruction"], "additionalProperties": False}}
+VISION_TOOL = {"name": "browserhelm_visual_act", "description": "Screenshot-to-point grounding with the vision provider selected in BrowserHelm Settings: local Ollama/LM Studio or cloud OpenRouter/TypeSafe Jev. A selected cloud provider receives the screenshot and target instruction. Jev vision is experimental and requires unique-target and box-confidence checks. Use when DOM refs cannot identify a visual target. Returns compact CSS coordinates, provider usage and latency, never the image. action=point proposes only; action=click performs one explicit click after checking the page has not changed. Optional successText checks text presence, not business completion. No retry or automatic provider switch. Inspect state after an error before another click.", "inputSchema": {"type": "object", "properties": {"page": {"type": "integer", "minimum": 1}, "instruction": {"type": "string", "minLength": 1, "maxLength": 500}, "action": {"type": "string", "enum": ["point", "click"], "default": "point"}, "successText": {"type": "string", "minLength": 4, "maxLength": 200}}, "required": ["page", "instruction"], "additionalProperties": False}}
 SAFE_PATH = re.compile(r"(?:logout|signout|log-out|sign-out|delete|remove|unsubscribe|checkout|purchase|confirm|callback|oauth|authorize|download|reset|revoke|invite|accept|reject|toggle|archive|submit)", re.I)
 
 def public_url(value, origin=None):
@@ -307,9 +307,13 @@ class BrowserHelmGateway(Gateway):
                 self.vision_settings_stamp = stamp
         return self.settings.get('vision', DEFAULT_VISION)
 
-    def vision_key(self):
-        if self.vision_api_key is None:
-            self.vision_api_key = self.read_provider_key('openrouter')
+    def vision_key(self, kind=None):
+        kind = kind or self.vision_config().get('provider')
+        if kind not in ('openrouter', 'typesafe'):
+            raise ValueError('Local vision does not use a cloud API key.')
+        if self.vision_api_key is None or getattr(self, 'vision_api_key_provider', kind) != kind:
+            self.vision_api_key = self.read_provider_key(kind)
+        self.vision_api_key_provider = kind
         return self.vision_api_key
 
     def delegation_enabled(self):
@@ -344,7 +348,7 @@ class BrowserHelmGateway(Gateway):
                 result['instructions'] += '\nPrefer browserhelm_execute for supported multi-step read-only browser tasks: supply one bounded plan, allowed actions and explicit completion checks. It batches inspection/extraction, delegates observed link choices and optionally locates visual targets. Read partial results on escalation before recovery. Completion verifies only its supplied checks. Keep complex planning, judgment and recovery with the main agent. Use direct tools for unsupported work; do not add a model call to a simple deterministic read.'
                 result["instructions"] += "\nUse browserhelm_navigate for bounded link navigation; its successText is an explicit text-presence test, not proof of a broader task. Provider errors/uncertainty return escalation. run remains available for complex work."
                 if self.vision_config().get('enabled'):
-                    result['instructions'] += '\nFor targets requiring vision, use browserhelm_visual_act instead of sending screenshots to the main model. Prefer current DOM refs when available; never use vision for login, CAPTCHA or required human approvals.'
+                    result['instructions'] += '\nPrefer current DOM/accessibility refs for ordinary controls. Batch deterministic reads and known actions inside run without adding decision or vision inference. Use the selected vision provider through browserhelm_visual_act only for a single unambiguous target that DOM refs cannot identify. Resolve duplicate targets before requesting coordinates. Keep visual review, complex judgment and recovery with the main model. Preserve current-page freshness and explicit postconditions; do not retry a possibly completed write. Never use vision for login, CAPTCHA or required human approvals.'
             else:
                 result['instructions'] += '\nBrowserHelm delegation is disabled in Settings. Use direct Neo tools through this gateway; the main agent handles browser decisions and vision. Compact results and task tracking remain available.'
         elif request.get("method") == "tools/list":

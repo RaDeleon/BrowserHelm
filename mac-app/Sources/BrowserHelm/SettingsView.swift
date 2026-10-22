@@ -21,7 +21,7 @@ struct SettingsView: View {
                         Spacer()
                         if store.storedKey { Button("Remove key", role: .destructive) { store.removeKey() } }
                     }
-                    Text("Use the exact model ID from your provider. Local models must support structured JSON output. LM Studio supplies the local API; Bionic is its separate agent app.").font(.caption).foregroundStyle(.secondary)
+                    Text("Use the exact model ID from your provider. Jev decisions default to pinned jev-1.13.0 for stable behavior; experimental Jev vision is separate. Local models must support structured JSON output.").font(.caption).foregroundStyle(.secondary)
                 } else {
                     Text("All Neo read and write tools remain available. Autonomous navigation requires a decision provider.").foregroundStyle(.secondary)
                 }
@@ -32,7 +32,7 @@ struct SettingsView: View {
                 Text("On: BrowserHelm runs bounded plans, using the selected decision and vision providers when needed. Off: Claude/Codex performs browser steps through direct tools; compact results remain enabled. Save, then reconnect to refresh available tools.").font(.caption).foregroundStyle(.secondary)
                 Toggle("Ask agent to mark tasks", isOn: $store.config.agentTaskMarkers)
                 Text("Optional start/finish tracking adds two agent calls per task. Off by default; manual Tasks controls still work. Save and reconnect to apply the agent guidance.").font(.caption).foregroundStyle(.secondary)
-                Text("Keep complex reasoning and recovery with the main model. Delegation is experimental: compare verified completion, total time and total cost before choosing a mode.").font(.caption).foregroundStyle(.secondary)
+                Text("Keep planning, judgment and recovery with Claude/Codex. Use DOM refs for ordinary controls and batch deterministic reads. Delegate bounded multi-step plans when useful; request vision only for a unique target that DOM refs cannot identify. These are conservative workflow settings, not a measured optimum.").font(.caption).foregroundStyle(.secondary)
             }
             Section("Browser gateway") {
                 TextField("Neo MCP endpoint", text: $store.config.upstream)

@@ -8,6 +8,7 @@ import pathlib
 import plistlib
 import re
 import sqlite3
+from sqlite_support import ClosingConnection
 import subprocess
 import sys
 import time
@@ -20,7 +21,7 @@ CATEGORIES = {
     'ok': ('Request completed.', 'No action needed.'),
     'rpc_error': ('The upstream MCP server returned an error.', 'Check the MCP code and Neo connection. Inspect browser state before repeating a write.'),
     'protocol_mismatch': ('MCP protocol negotiation failed.', 'Reconnect the MCP client after its current task finishes. Check that both apps are up to date.'),
-    'session_expired': ('The Neo transport session is missing or expired.', 'Reconnect the MCP client after its task finishes. Inspect browser state before repeating a write.'),
+    'session_expired': ('The Neo transport session is missing or expired.', 'The next request will attempt session renewal. The failed request was not replayed; inspect browser state before repeating a write. Reconnect the client if renewal fails.'),
     'neo_unavailable': ('BrowserOS Neo could not be reached.', 'Start BrowserOS Neo and check its MCP endpoint in Settings. Reconnect the client if Neo restarted.'),
     'timeout': ('A connection or browser step timed out.', 'Inspect the browser before retrying. A timed-out write may already have completed.'),
     'browser_execution': ('Neo reported an unsuccessful browser execution.', 'Check the tab and the failed call in your client. Verify the SDK method and selector before retrying.'),
@@ -145,7 +146,7 @@ class Diagnostics:
         os.chmod(self.path, 0o600)
 
     def db(self):
-        db = sqlite3.connect(str(self.path), timeout=1)
+        db = sqlite3.connect(str(self.path), timeout=1, factory=ClosingConnection)
         db.row_factory = sqlite3.Row
         return db
 
@@ -193,7 +194,7 @@ def alive(pid):
 
 def historical_failures(path, known):
     if not path.is_file(): return []
-    with sqlite3.connect(path.as_uri()+'?mode=ro', uri=True) as db:
+    with sqlite3.connect(path.as_uri()+'?mode=ro', uri=True, factory=ClosingConnection) as db:
         db.row_factory = sqlite3.Row
         rows = db.execute("SELECT id,session_id,method,tool,started,finished,status,upstream_calls,input_bytes,client_bytes FROM requests WHERE status != 'ok' ORDER BY started DESC LIMIT 500").fetchall()
     result = []
@@ -253,7 +254,7 @@ def diagnostic_snapshot(path, metrics_path=None, log_path=None, include_processe
     total = 0
     if path.is_file():
         try:
-            with sqlite3.connect(path.as_uri()+'?mode=ro', uri=True, timeout=1) as db:
+            with sqlite3.connect(path.as_uri()+'?mode=ro', uri=True, timeout=1, factory=ClosingConnection) as db:
                 db.row_factory = sqlite3.Row
                 events = [dict(r) for r in db.execute('SELECT * FROM events ORDER BY created DESC LIMIT ?', (DISPLAY_LIMIT,))]
                 total = db.execute('SELECT COUNT(*) FROM events').fetchone()[0]

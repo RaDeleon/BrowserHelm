@@ -1,4 +1,4 @@
-# BrowserHelm 0.5.1: personal macOS execution gateway
+# BrowserHelm 0.5.3: personal macOS execution gateway
 
 A separately named macOS companion for installed BrowserOS Neo. Not a Chromium fork. Claude Desktop and Codex use its stdio MCP executable; Neo performs browser actions. Jev or a chosen model makes bounded navigation decisions inside the gateway.
 
@@ -22,7 +22,7 @@ args = ["--mcp"]
 
 ## Providers
 
-- **TypeSafe AI / Jev:** `https://api.typesafe.ai/v1`, `jev-latest`; typed `choice` API. Requires key. Chosen-option probability below 0.70 escalates; this is a threshold, not a correctness guarantee.
+- **TypeSafe AI / Jev:** `https://api.typesafe.ai/v1`, `jev-1.13.0`; typed `choice` API. Requires key. Chosen-option probability below 0.70 escalates; this is a threshold, not a correctness guarantee.
 - **OpenRouter:** `https://openrouter.ai/api/v1`, enter exact model ID; requires key and a model supporting strict JSON schema. Parameter support is required; unsupported models fail rather than silently removing the schema.
 - **Ollama:** `http://127.0.0.1:11434/v1`; use an installed model ID. Local server normally needs no key.
 - **LM Studio:** `http://127.0.0.1:1234/v1`; use the server's model ID, start server in Developer tab. Optional authentication key. **Bionic is a separate LM Studio agent app**, not a rename of this API server.
@@ -122,3 +122,11 @@ API references: [OpenViking retrieval](https://docs.openviking.ai/en/api/06-retr
 ### Remove a client connection
 
 In **Settings → MCP clients** or **Connectors**, choose **Remove from Claude Desktop** or **Remove from Codex** and confirm. Only BrowserHelm’s matching MCP entry is removed, with a private backup; other connectors and app data remain. Finish active browser work first. Restart the client to unload its cached tools. Use Connect to add the entry again.
+
+## Experimental Jev vision (0.5.2)
+
+Settings → Vision now offers TypeSafe / Jev alongside local Ollama/LM Studio and OpenRouter. It pins `jev-1.14.0`, shares the TypeSafe Keychain account, and asks unique-target visibility plus bounding-box questions in one request. Both the target probability and box confidence must meet the configured threshold before existing freshness/click checks run. Local remains the default. See [setup, privacy, limitations and measurement](docs/local-vision.md#experimental-typesafe--jev-vision-052). No matched task speed or total-cost benefit is established.
+
+## Current workflow profile (0.5.3)
+
+For this user's explicitly selected cloud workflow: DeepSeek V4.1 Flash vision, pinned Jev 1.13 navigation decisions, bounded delegation and existing verified learning enabled, task markers off, full tool catalog, and the 2,000-token-equivalent result budget. Prefer DOM refs and batched deterministic browser work; use vision for unique targets that DOM refs cannot identify. Keep planning, visual judgment and recovery with the main agent. These settings preserve the current capabilities without assuming that every task benefits from a model call. See [workflow profile](docs/workflow-settings.md).

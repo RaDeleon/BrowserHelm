@@ -8,7 +8,7 @@ import urllib.request
 from gateway import encode
 
 DEFAULTS = {
-    "typesafe": {"endpoint": "https://api.typesafe.ai/v1", "model": "jev-latest"},
+    "typesafe": {"endpoint": "https://api.typesafe.ai/v1", "model": "jev-1.13.0"},
     "openrouter": {"endpoint": "https://openrouter.ai/api/v1", "model": ""},
     "ollama": {"endpoint": "http://127.0.0.1:11434/v1", "model": ""},
     "lmstudio": {"endpoint": "http://127.0.0.1:1234/v1", "model": ""},

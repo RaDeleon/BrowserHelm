@@ -1,23 +1,16 @@
 [
   {
-    "id": "qwen/qwen3.8-flash",
-    "name": "Qwen3.8 Flash",
-    "purpose": "First choice to try · economical screen understanding",
-    "detail": "A cost-conscious candidate for visual understanding and desktop interaction. Test click accuracy on your pages before making it your default.",
-    "url": "https://openrouter.ai/qwen/qwen3.8-flash"
-  },
-  {
-    "id": "google/gemini-3.8-flash",
-    "name": "Gemini3.8 Flash",
-    "purpose": "Complex screens · visual reasoning",
-    "detail": "A candidate for more demanding visual reasoning and agent tasks. Compare completed tasks and total latency against the cheaper options.",
-    "url": "https://openrouter.ai/google/gemini-3.8-flash"
-  },
-  {
     "id": "deepseek/deepseek-v4.1-flash",
     "name": "DeepSeek V4.1 Flash",
-    "purpose": "Alternative · efficient multimodal agent model",
-    "detail": "Native image understanding for computer-use agents. Uses the current V4.1 model rather than the earlier experimental vision checkpoint.",
+    "purpose": "Current cloud default \u00b7 tested clear targets",
+    "detail": "Located 6/6 clear fixture targets and completed 2/2 verified clicks. Failed both ambiguity checks: resolve duplicate targets first and prefer DOM refs. Full-task superiority has not been established.",
     "url": "https://openrouter.ai/deepseek/deepseek-v4.1-flash"
+  },
+  {
+    "id": "qwen/qwen3.8-flash",
+    "name": "Qwen3.8 Flash",
+    "purpose": "Experimental \u00b7 mixed fixture results",
+    "detail": "Completed both fixture clicks, but 4/12 responses failed coordinate validation and both ambiguity checks failed. Keep as a manual trial option; not the recommended default.",
+    "url": "https://openrouter.ai/qwen/qwen3.8-flash"
   }
 ]

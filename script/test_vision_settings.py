@@ -14,7 +14,12 @@ class VisionSettingsTests(unittest.TestCase):
         probe = r'''import Foundation
 let old = Data("{\"enabled\":true,\"provider\":\"ollama\",\"endpoint\":\"http://127.0.0.1:11434\",\"model\":\"my-local-model\"}".utf8)
 var vision = try JSONDecoder().decode(VisionConfiguration.self, from: old)
-precondition(vision.enabled && vision.model == "my-local-model")
+precondition(vision.enabled && vision.model == "my-local-model" && vision.minConfidence == 0.9)
+vision.selectProvider("typesafe")
+precondition(vision.endpoint == "https://api.typesafe.ai/v1" && vision.model == "jev-1.14.0")
+vision.minConfidence = 0.95
+vision.selectProvider("ollama")
+precondition(vision.model == "my-local-model")
 vision.selectProvider("openrouter")
 precondition(vision.endpoint == "https://openrouter.ai/api/v1")
 vision.model = "deepseek/deepseek-v4.1-flash"
@@ -23,9 +28,17 @@ vision.selectProvider("ollama"); precondition(vision.model == "my-local-model")
 vision.selectProvider("openrouter"); precondition(vision.model == "deepseek/deepseek-v4.1-flash")
 var restored = try JSONDecoder().decode(VisionConfiguration.self, from: JSONEncoder().encode(vision))
 restored.selectProvider("lmstudio"); precondition(restored.model == "studio-model")
+restored.selectProvider("typesafe")
+precondition(restored.model == "jev-1.14.0" && restored.minConfidence == 0.95)
+restored.selectProvider("openrouter")
+precondition(restored.model == "deepseek/deepseek-v4.1-flash")
+precondition(VisionConfiguration().provider == "ollama" && !VisionConfiguration().enabled)
 let migrated = try JSONDecoder().decode(VisionConfiguration.self, from: Data("{\"provider\":\"openrouter\"}".utf8))
-precondition(migrated.model == "qwen/qwen3.8-flash" && !migrated.enabled)
+precondition(migrated.model == "deepseek/deepseek-v4.1-flash" && !migrated.enabled)
+let explicitOldCloud = try JSONDecoder().decode(VisionConfiguration.self, from: Data("{\"provider\":\"openrouter\",\"model\":\"qwen/qwen3.8-flash\"}".utf8))
+precondition(explicitOldCloud.model == "qwen/qwen3.8-flash")
 var configuration = Configuration()
+precondition(configuration.providers["typesafe"]?.model == "jev-1.13.0")
 configuration.provider = "typesafe"
 configuration.vision = restored
 configuration.memory.enabled = true

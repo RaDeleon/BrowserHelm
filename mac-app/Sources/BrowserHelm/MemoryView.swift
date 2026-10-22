@@ -75,6 +75,7 @@ struct MemoryView: View {
     }
     private func outcome(_ experience: MemoryExperience) -> String {
         if experience.test == true { return "Validation record" }
+        if experience.provenance == "legacy; origin not recorded" { return "Legacy · origin not recorded" }
         if experience.kind == "tool_outcome" { return experience.status == "error" ? "Request failed" : "Request accepted" }
         return experience.verified ? "Text verified" : "Escalated"
     }

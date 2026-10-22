@@ -6,6 +6,7 @@ import os
 import pathlib
 import re
 import sqlite3
+from sqlite_support import ClosingConnection
 import threading
 import time
 import urllib.parse
@@ -110,7 +111,7 @@ class ExperienceMemory:
             return self.initial_enabled
 
     def db(self):
-        return sqlite3.connect(str(self.path), timeout=.1)
+        return sqlite3.connect(str(self.path), timeout=.1, factory=ClosingConnection)
 
     def state(self, key, value):
         with self.db() as db:
@@ -267,6 +268,7 @@ class ExperienceMemory:
                     'goal': 'Visual target '+report['status'], 'verified': report['verified'], 'status': report['status'],
                     'verification': 'successText absent before click; presence afterward only if verified=true',
                     'groundingSource': source, 'taskKey': task, 'test': self.validation,
+                    'provenance': 'validation' if self.validation else 'runtime',
                     'lesson': 'Use only the identical fresh screen and matching task; revoke reuse after failed verification.',
                     'model': clean(point.get('model', ''), 100)}
         return self.enqueue(document)
@@ -288,6 +290,14 @@ class ExperienceMemory:
 
     def capture_tool(self, tool, arguments, row, hint_shown=False):
         if not self.enabled or tool.startswith(('openragnar_', 'browserhelm_')): return
+        if self.validation:
+            # Retain labeled failures without poisoning production signatures/counters.
+            return self.enqueue({'schema': 2, 'source': 'openragnar', 'kind': 'tool_outcome',
+                'id': row['id'], 'created': row['finished'], 'test': True,
+                'provenance': 'validation', 'goal': clean(tool, 80)+' validation request',
+                'verified': False, 'verification': 'MCP outcome only; task completion unknown',
+                'tool': clean(tool, 80), 'status': row['status'],
+                'category': (row.get('diagnostic') or {}).get('category', 'ok')})
         from diagnostics import issue
         category = issue((row.get('diagnostic') or {}).get('category', 'ok'))['category']
         identifier = row['id']
@@ -302,7 +312,7 @@ class ExperienceMemory:
         # Sync reusable failure/recovery evidence, not every successful low-level request.
         if row['status'] == 'error' or previous:
             document = {'schema': 2, 'source': 'openragnar', 'kind': 'tool_outcome', 'id': identifier, 'created': row['finished'],
-                        'test': False, 'goal': clean(tool, 80)+' request '+('failed' if row['status']=='error' else 'accepted after failure'),
+                        'test': False, 'provenance': 'runtime', 'goal': clean(tool, 80)+' request '+('failed' if row['status']=='error' else 'accepted after failure'),
                         'verified': False, 'verification': 'MCP outcome only; task completion unknown', 'tool': clean(tool, 80),
                         'status': row['status'], 'category': category, 'lesson': issue(category)['advice']}
             self.enqueue(document)
@@ -384,7 +394,8 @@ class ExperienceMemory:
         if not self.enabled or report.get('status') == 'proposal': return 'not saved'
         identifier = str(uuid.uuid4())
         document = {'schema':2, 'source':'openragnar', 'kind':'navigation', 'id':identifier, 'created':time.time(),
-              'test':test or 'validation' in str(report.get('provider','')).lower(), 'host':urllib.parse.urlsplit(start).netloc, 'start':safe_url(start),
+              'provenance': 'validation' if self.validation or test or 'validation' in str(report.get('provider','')).lower() else 'runtime',
+              'test':self.validation or test or 'validation' in str(report.get('provider','')).lower(), 'host':urllib.parse.urlsplit(start).netloc, 'start':safe_url(start),
             'goal':clean(goal), 'successText':clean(needle,200), 'verified':report.get('verified') is True,
             'verification':clean(report.get('verificationScope','literal successText presence only'),200), 'status':report.get('status'),
             'provider':clean(report.get('provider',''),60), 'browserCalls':report.get('browserCalls',0),
@@ -441,6 +452,6 @@ class ExperienceMemory:
               'visual_calls_avoided':int(state.get('visual_calls_avoided',0)), 'visual_reuse_verified':int(state.get('visual_reuse_verified',0)),
               'recall_source':state.get('recall_source','Not used'),
             'recent':[{'id':json.loads(r[0])['id'], 'goal':json.loads(r[0])['goal'],
-                  'kind':json.loads(r[0]).get('kind','navigation'), 'failure_category':json.loads(r[0]).get('failureCategory') or json.loads(r[0]).get('category'),
-                  'status':json.loads(r[0]).get('status','unknown'), 'test':json.loads(r[0]).get('test',False),
+                  'kind':json.loads(r[0]).get('kind','navigation'), 'provenance':json.loads(r[0]).get('provenance','legacy; origin not recorded'), 'failure_category':json.loads(r[0]).get('failureCategory') or json.loads(r[0]).get('category'),
+                  'status':json.loads(r[0]).get('status','unknown'), 'test':json.loads(r[0]).get('test',False) or 'validation' in str(json.loads(r[0]).get('provider','')).lower(),
                 'verified':json.loads(r[0])['verified'], 'created':json.loads(r[0])['created'], 'synced':r[1] is not None} for r in recent]}

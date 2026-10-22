@@ -101,8 +101,9 @@ class CloudVisionTests(unittest.TestCase):
 
     def test_presets_are_unique_current_model_ids_and_primary_links(self):
         models = json.loads(pathlib.Path(__file__).with_name('vision-models.json').read_text())
-        self.assertEqual(len(models), 3)
-        self.assertEqual(len({m['id'] for m in models}), 3)
+        self.assertEqual(len(models), 2)
+        self.assertEqual(len({m['id'] for m in models}), 2)
+        self.assertEqual(models[0]['id'], 'deepseek/deepseek-v4.1-flash')
         for model in models:
             VisionProvider({**CONFIG, 'model': model['id']}, 'fake')
             self.assertEqual(model['url'], 'https://openrouter.ai/' + model['id'])

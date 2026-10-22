@@ -4,6 +4,7 @@ No prompts, browser content, credentials or model reasoning are stored.
 import json
 import math
 import sqlite3
+from sqlite_support import ClosingConnection
 import time
 import uuid
 
@@ -60,7 +61,7 @@ class TaskLedger:
             db.execute("DELETE FROM tasks WHERE started<?", (time.time()-90*86400,))
             db.execute('DELETE FROM task_sessions WHERE task_id NOT IN (SELECT id FROM tasks)')
     def db(self):
-        db=sqlite3.connect(self.path, timeout=2); db.row_factory=sqlite3.Row
+        db=sqlite3.connect(self.path, timeout=2, factory=ClosingConnection); db.row_factory=sqlite3.Row
         return db
     def active(self, session_id):
         with self.db() as db:

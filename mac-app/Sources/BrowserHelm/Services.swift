@@ -40,7 +40,7 @@ enum Runner {
         var environment = ProcessInfo.processInfo.environment
         for key in ["PYTHONHOME", "PYTHONPATH", "BROWSERHELM_API_KEY", "BROWSERHELM_VISION_API_KEY"] { environment.removeValue(forKey: key) }
         if config.provider != "none" && mode == "--test-provider" { environment["BROWSERHELM_API_KEY"] = try Keys.read(config.provider) }
-        if config.vision.provider == "openrouter" && mode == "--test-vision" { environment["BROWSERHELM_VISION_API_KEY"] = try Keys.read("openrouter") }
+        if ["openrouter", "typesafe"].contains(config.vision.provider) && mode == "--test-vision" { environment["BROWSERHELM_VISION_API_KEY"] = try Keys.read(config.vision.provider) }
         environment["PYTHONDONTWRITEBYTECODE"] = "1"
         // Browser tools do not need a decision-provider credential. Fetch lazily via a private child pipe.
         if mode == "--mcp" { environment["BROWSERHELM_KEY_HELPER"] = Bundle.main.executableURL!.path }

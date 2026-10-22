@@ -175,13 +175,43 @@ class Gateway:
         self.protocol = "2025-03-26"
         self.lock = threading.Lock()
         self.docs = {}
+        self.renewal_lock = threading.Lock()
+        self.initialize_params = None
+        self.session_expired = False
         # Do not send a signed-in loopback browser request via an environment proxy.
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
     def upstream_call(self, request):
+        # Renew only before a subsequent request. The rejected request is never
+        # replayed: even a read-looking tool can contain arbitrary browser code.
+        with self.renewal_lock:
+            if request.get('method') == 'initialize':
+                self.initialize_params = copy.deepcopy(request.get('params', {}))
+            elif self.session_expired:
+                if self.initialize_params is None:
+                    raise RuntimeError('Neo session expired; reconnect the MCP client')
+                reply = self._send_upstream({'jsonrpc': '2.0',
+                    'id': 'browserhelm-renew-' + secrets.token_hex(8),
+                    'method': 'initialize', 'params': self.initialize_params}, timeout_limit=10)
+                result = reply.get('result') if isinstance(reply, dict) else None
+                if not isinstance(result, dict) or not isinstance(result.get('protocolVersion'), str):
+                    raise RuntimeError('Neo session renewal failed; reconnect the MCP client')
+                with self.lock:
+                    self.protocol = result['protocolVersion']
+                initialized = self._send_upstream({'jsonrpc': '2.0', 'method': 'notifications/initialized'}, timeout_limit=10)
+                if initialized is not None:
+                    raise RuntimeError('Neo initialization notification failed; reconnect the MCP client')
+                self.session_expired = False
+        reply = self._send_upstream(request)
+        if request.get('method') == 'initialize' and isinstance(reply, dict) and isinstance(reply.get('result'), dict):
+            self.session_expired = False
+        return reply
+
+    def _send_upstream(self, request, timeout_limit=120):
         headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
         with self.lock:
-            if self.session:
+            sent_session = self.session
+            if self.session and request.get("method") != "initialize":
                 headers["Mcp-Session-Id"] = self.session
             # Initialize offers the client's version; later requests use the
             # server's negotiated version. Neo rejects a mismatched offer/header.
@@ -189,12 +219,20 @@ class Gateway:
                                                 if request.get("method") == "initialize" else self.protocol)
         req = urllib.request.Request(self.upstream, data=encode(request), headers=headers)
         try:
-            response = self.opener.open(req, timeout=self.request_timeout() if hasattr(self, 'request_timeout') else 120)
+            response = self.opener.open(req, timeout=min(timeout_limit, self.request_timeout() if hasattr(self, 'request_timeout') else 120))
         except urllib.error.HTTPError as error:
+            if error.code in (404, 410) and sent_session and request.get('method') != 'initialize':
+                with self.lock:
+                    if self.session == sent_session:
+                        self.session = None
+                        self.session_expired = True
             hook = getattr(self, 'transport_error', None)
             if hook:
                 hook(error, error.code)
-            raw = error.read(MAX_WIRE_BYTES + 1)
+            try:
+                raw = error.read(MAX_WIRE_BYTES + 1)
+            finally:
+                error.close()
             try:
                 value = json.loads(raw)
                 if isinstance(value, dict) and "error" in value:
@@ -214,7 +252,7 @@ class Gateway:
         with response:
             with self.lock:
                 session = response.headers.get("Mcp-Session-Id")
-                if session:
+                if session and (request.get("method") == "initialize" or self.session == sent_session):
                     self.session = session
             if "id" not in request or response.status == 202:
                 return None

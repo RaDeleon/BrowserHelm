@@ -244,7 +244,7 @@ Select a provider and save its endpoint, model and key in **Settings**. Keys use
 
 See the [user guide](README-BrowserHelm.md) for provider endpoints, Codex configuration and setup details.
 
-For optional screenshot grounding, open **Settings → Vision**. The tested starting model is `qwen3-vl:2b-instruct` in Ollama, downloaded separately (about 1.9 GB). Keep it local or select OpenRouter and one of three presets, then save. Enter your OpenRouter key in the vision section for cloud models. First enabling vision requires reconnecting your MCP client; subsequent model switches apply to its next request. Ask the client to use `browserhelm_visual_act` for visual targets instead of receiving screenshots itself. Jev remains your text decision provider. See [local vision setup, boundaries and tests](docs/local-vision.md). BrowserVLM's unreleased weights are not bundled, and this feature does not establish 10× speed or subscription savings.
+For optional screenshot grounding, open **Settings → Vision**. The tested starting model is `qwen3-vl:2b-instruct` in Ollama, downloaded separately (about 1.9 GB). Keep it local or explicitly select OpenRouter with DeepSeek V4.1 Flash as its default (Qwen remains experimental), then save. Enter your OpenRouter key in the vision section for cloud models. First enabling vision requires reconnecting your MCP client; subsequent model switches apply to its next request. Ask the client to use `browserhelm_visual_act` for visual targets instead of receiving screenshots itself. Jev remains your text decision provider. See [local vision setup, boundaries and tests](docs/local-vision.md). BrowserVLM's unreleased weights are not bundled, and this feature does not establish 10× speed or subscription savings.
 
 ## Try a delegated task
 
@@ -341,3 +341,11 @@ In **Settings → MCP clients** or **Connectors**, choose **Remove from Claude D
 [![BrowserHelm repository statistics](https://github-readme-stats.vercel.app/api/pin/?username=RaDeleon&repo=BrowserHelm&theme=github_dark&hide_border=true)](https://github.com/RaDeleon/BrowserHelm)
 
 <sub>Release and CI badges use live repository metadata. GitHub Readme Stats cards are cached and may lag. Badge styling: <a href="https://shields.io/">Shields.io</a> and <a href="https://github.com/Ileriayo/markdown-badges">Markdown Badges</a>; technology icons: <a href="https://skillicons.dev/">Skill Icons</a>; repository card: <a href="https://github.com/anuraghazra/github-readme-stats">GitHub Readme Stats</a>.</sub>
+
+### Experimental Jev image grounding
+
+Version 0.5.2 adds an optional TypeSafe / Jev vision provider, pinned to `jev-1.14.0`, with unique-target visibility and bounding-box checks in one request. Local vision remains the default. See [setup and limitations](docs/local-vision.md#experimental-typesafe--jev-vision-052). Performance and total task cost require matched measurement.
+
+### Current workflow settings (0.5.3)
+
+DeepSeek V4.1 Flash is the default for explicitly selected OpenRouter vision. Jev navigation defaults to pinned `jev-1.13.0`. The app prioritizes DOM refs, batched deterministic work, bounded plans when useful and verified postconditions. Qwen is labeled experimental; Gemini is omitted from the curated picker; UI-TARS remains test-only. Existing saved selections and local-first defaults for new installations are preserved. See [the configured workflow](docs/workflow-settings.md).

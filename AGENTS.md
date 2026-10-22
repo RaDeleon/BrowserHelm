@@ -26,3 +26,9 @@ For structural codebase exploration, use the installed `codebase-memory` skill.
 - Preserve the user's settings, Keychain entries, metrics, diagnostics, and experience memory during installation.
 - Wait for active MCP/browser tasks to finish before replacing the installed app; do not interrupt their work to update it.
 - Verify the installed version and code signature. Reconnect MCP clients after installation and confirm they report the new version before calling the update complete.
+
+## Publishing releases
+
+- For every validated BrowserHelm version update, commit and push the release source and publish a GitHub release with matching version tag, release notes, verified installer and checksum. A local build/install alone does not complete a release.
+- Keep generated captures, private settings, metrics, credentials and local experiment outputs out of commits and release assets.
+- Identify preview/ad-hoc signing and notarization status accurately. Verify the published tag, source commit and downloadable assets before reporting publication complete.
