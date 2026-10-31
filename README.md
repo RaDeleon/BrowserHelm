@@ -84,11 +84,12 @@ The engineering work includes MCP negotiation, context compaction and recovery, 
 
 ## Performance target
 
-**The target is 10× faster verified task completion than the same Claude/Codex client using BrowserOS Neo directly, without a proportional increase in cost.** The cost objective is equal or lower total cost per successful task. A 10× speedup at 10× the cost does not meet the product goal. This is a development target; current tests have not demonstrated that end-to-end advantage.
+**The target is 10× fewer client-reported main-agent tokens per independently verified task than the same Claude/Codex client using BrowserOS Neo directly.** Measure elapsed time separately. The cost objective is equal or lower total cost per successful task, including decision, vision and memory costs. This is a development target; current tests have not demonstrated 10× task-token savings.
 
 | Measure | Acceptance criterion |
 | --- | --- |
-| Speed | Baseline elapsed time divided by BrowserHelm elapsed time is at least 10 for the declared benchmark workload. Measure from task submission through independently verified completion. |
+| Main-agent tokens | Baseline client-reported token total divided by BrowserHelm total is at least 10 for the matched workload. Report input, output and cache categories separately; include failures and recovery. Catalog bytes and text token equivalents cannot establish this. |
+| Speed | Report median/tail elapsed time from task submission through independently verified completion. Token reduction does not imply a speedup. |
 | Quality | Maintain or improve completion accuracy. Retain failures, recovery time and escalation; faster unsuccessful attempts are not completed tasks. |
 | Cost | Compare total cost per successful task, including main-agent usage, decision and vision calls, and memory embedding/storage. Aim for equal or lower cost; disclose any increase separately from speed. Missing costs remain unknown. |
 | Subscription efficiency | Track client-reported tokens and planner turns separately from API cost estimates. Lower usage can preserve allowance; it does not automatically lower a fixed subscription bill or establish a quota-savings percentage. |

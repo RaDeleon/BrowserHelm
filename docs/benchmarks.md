@@ -1,5 +1,7 @@
 # Testing and benchmarking
 
+The primary development target is **10× fewer client-reported main-agent tokens per independently verified task**. Elapsed time, accuracy and total cost are separate outcomes. Require matched tasks and comparable tool exposure; retain failures, recovery and verification usage. Report the client's disjoint input, output and cache categories and its counting convention. Missing main-agent usage cannot be replaced by gateway text bytes, provider usage or an assumed subscription allowance saving. A smaller catalog is mechanism evidence, not a 10× task-token result.
+
 The reproducible [six-case Opus High suite](six-case-benchmark.md) compares direct Neo, compact forwarding and optional delegation. Its [first pilot report](validation/2026-10-11-six-case-pilot.md) retains the blocked arms and separates controlled learning evidence from main-agent task results.
 
 The [0.4.12 retest](validation/2026-10-11-six-case-retest-0.4.12.md) keeps the next 18 attempts separate: fewer marker/argument round trips, with workload-specific speed/cost results and one retained independent-verifier discrepancy.

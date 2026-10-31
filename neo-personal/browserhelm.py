@@ -343,12 +343,16 @@ class BrowserHelmGateway(Gateway):
             if self.settings.get('agentTaskMarkers', False) is True:
                 result['instructions'] += '\nFor each new user prompt involving browser work, start browserhelm_task with a short label, actual main-agent model and effort if known, then finish after verification. Continue the same task for clarification/recovery. Save the task ID and attach it after reconnect. Do not invent usage. These markers approximate prompt boundaries; manual Tasks controls can record submission time.'
             else:
-                result['instructions'] += '\nTask markers are optional and disabled by default to avoid extra round trips. Use browserhelm_task only when task tracking is requested; manual Tasks controls remain available.'
+                result['instructions'] += '\nTask markers are optional: use browserhelm_task only when tracking is requested. Manual Tasks controls remain available.'
             if self.delegation_enabled():
-                result['instructions'] += '\nPrefer browserhelm_execute for supported multi-step read-only browser tasks: supply one bounded plan, allowed actions and explicit completion checks. It batches inspection/extraction, delegates observed link choices and optionally locates visual targets. Read partial results on escalation before recovery. Completion verifies only its supplied checks. Keep complex planning, judgment and recovery with the main agent. Use direct tools for unsupported work; do not add a model call to a simple deterministic read.'
-                result["instructions"] += "\nUse browserhelm_navigate for bounded link navigation; its successText is an explicit text-presence test, not proof of a broader task. Provider errors/uncertainty return escalation. run remains available for complex work."
+                result['instructions'] = result['instructions'].replace(
+                    'Use run for bounded multi-step work (30s max).',
+                    'For supported multi-step read-only plans use browserhelm_execute. '
+                    'Use run for other bounded multi-step work (30s max).')
+                result['instructions'] += '\nSupply one executor plan with allowed actions and explicit text/selector completion checks; verification covers only those checks. Batch inspection/extraction without inference. Observed-link choices use the configured decision provider. On escalation, read partial results before recovery; keep judgment/recovery with the main agent.'
+                result["instructions"] += "\nbrowserhelm_navigate handles standalone bounded link navigation; successText proves text presence only. Provider errors/uncertainty escalate."
                 if self.vision_config().get('enabled'):
-                    result['instructions'] += '\nPrefer current DOM/accessibility refs for ordinary controls. Batch deterministic reads and known actions inside run without adding decision or vision inference. Use the selected vision provider through browserhelm_visual_act only for a single unambiguous target that DOM refs cannot identify. Resolve duplicate targets before requesting coordinates. Keep visual review, complex judgment and recovery with the main model. Preserve current-page freshness and explicit postconditions; do not retry a possibly completed write. Never use vision for login, CAPTCHA or required human approvals.'
+                    result['instructions'] += '\nUse DOM/accessibility refs first. For one unambiguous target DOM cannot identify, use browserhelm_visual_act with the selected vision provider. Resolve duplicate targets first; keep visual judgment with the main agent. Preserve freshness/postconditions; never retry a possibly completed write or use vision for login/CAPTCHA/approval.'
             else:
                 result['instructions'] += '\nBrowserHelm delegation is disabled in Settings. Use direct Neo tools through this gateway; the main agent handles browser decisions and vision. Compact results and task tracking remain available.'
         elif request.get("method") == "tools/list":

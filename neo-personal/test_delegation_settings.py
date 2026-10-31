@@ -59,6 +59,20 @@ class DelegationSettingsTests(unittest.TestCase):
                 self.assertTrue(result['result']['isError'])
                 execute.assert_not_called(); browser.assert_not_called()
 
+    def test_delegated_routing_overrides_generic_run_preference(self):
+        instructions = self.g.transform({'method':'initialize'}, {'result':{'instructions':'Neo'}})['result']['instructions']
+        self.assertIn('For supported multi-step read-only plans use browserhelm_execute.', instructions)
+        self.assertNotIn('Use run for bounded multi-step work', instructions)
+        self.assertIn('Use run for other bounded multi-step work', instructions)
+
+    def test_compact_guidance_keeps_verification_recovery_and_vision_boundaries(self):
+        instructions = self.g.transform({'method':'initialize'}, {'result':{'instructions':'Neo'}})['result']['instructions']
+        for phrase in ('allowed actions', 'text/selector completion checks', 'partial results',
+                       'judgment/recovery', 'without inference', 'DOM/accessibility refs first',
+                       'never retry a possibly completed write', 'login/CAPTCHA/approval',
+                       'request_human_help', 'await_human_help', 'neo_read_output'):
+            self.assertIn(phrase, instructions)
+
     def test_off_guidance_keeps_planning_with_host(self):
         self.g.settings['delegationEnabled'] = False
         result = self.g.transform({'method':'initialize'},{'result':{'instructions':'Neo instructions'}})['result']
