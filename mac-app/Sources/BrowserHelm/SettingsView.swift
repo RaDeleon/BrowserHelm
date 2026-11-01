@@ -42,8 +42,9 @@ struct SettingsView: View {
             }
             Section("MCP clients") {
                 ClientConnectionActions(store: store, client: "Claude Desktop")
+                ClientConnectionActions(store: store, client: "Claude Code")
                 ClientConnectionActions(store: store, client: "Codex")
-                Text("Connect or remove BrowserHelm’s MCP entry. Restart the client after changing a connection; existing sessions keep their tools until restarted.").font(.caption).foregroundStyle(.secondary)
+                Text("Claude Desktop and Claude Code use separate configurations. Connect adds BrowserHelm without changing your tool routing preferences. Start a new Code session or reopen Desktop after changing a connection.").font(.caption).foregroundStyle(.secondary)
             }
             Section("OpenViking memory") {
                 Toggle("Learn from navigation, vision and request outcomes", isOn: $store.config.memory.enabled)

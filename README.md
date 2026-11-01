@@ -224,7 +224,9 @@ python3 script/install_local.py --apply --idle-confirmed
 open /Applications/BrowserHelm.app
 ```
 
-The package script creates a versioned `dist/BrowserHelm-<version>-arm64.dmg`. Install the app in Applications before configuring clients. **Connectors → Connect Claude Desktop** and **Connectors → Connect Codex** back up and add a separate `browserhelm` entry, preserving other servers. Codex setup uses its shared `~/.codex/config.toml` (or `CODEX_HOME/config.toml` when set), requires no separately installed CLI, preserves comments, and refuses invalid TOML or conflicting entries. Copy config remains available for manual setup. Open a new Codex chat or restart the client to load the tools. Configured is distinct from a live connection; old processes retain their loaded engine.
+The package script creates a versioned `dist/BrowserHelm-<version>-arm64.dmg`. Install the app in Applications before configuring clients. **Connectors → Connect Claude Desktop**, **Connect Claude Code**, and **Connect Codex** add a separate `browserhelm` entry with private backups, preserving other servers. Claude Desktop and Claude Code use different configurations: the Desktop action does not configure Code. Code setup adds a user-scope stdio entry to `~/.claude.json`, preserving project settings. Existing matching entries are left untouched; conflicting or disabled entries require review. Codex setup uses its shared `~/.codex/config.toml` (or `CODEX_HOME/config.toml` when set), requires no separately installed CLI, preserves comments, and refuses invalid TOML or conflicting entries. Copy config remains available for manual setup. Start a fresh Code/Codex session or reopen Claude Desktop to load the tools. Configured is distinct from a live connection; old processes retain their loaded engine.
+
+Connecting does not override the agent's routing instructions. Calls named `mcp__browserhelm__…` use this gateway; direct Neo calls bypass it. If both connectors are available, select BrowserHelm in the task or client instructions when you want its compaction and executor. The app preserves the direct connector for comparison. At startup, a refused Neo connection receives a short bounded retry window; timeouts, HTTP failures and browser actions are never automatically replayed. If Neo is still starting after that window, wait for it to become ready and reconnect the client.
 
 Local builds are ad-hoc signed. The [release guide](docs/releases.md) covers isolated test builds, Developer ID signing, notarization and the feature → staging → main workflow. Public signing remains unverified pending Apple Developer enrollment; setting up these scripts does not make an existing DMG notarized.
 
@@ -335,7 +337,7 @@ Original BrowserHelm code is [Apache-2.0](LICENSE). Dependencies retain their ow
 
 ### Remove a client connection
 
-In **Settings → MCP clients** or **Connectors**, choose **Remove from Claude Desktop** or **Remove from Codex** and confirm. Only BrowserHelm’s matching MCP entry is removed, with a private backup; other connectors and app data remain. Finish active browser work first. Restart the client to unload its cached tools. Use Connect to add the entry again.
+In **Settings → MCP clients** or **Connectors**, choose **Remove from Claude Desktop**, **Remove from Claude Code**, or **Remove from Codex** and confirm. Only BrowserHelm’s matching MCP entry is removed, with a private backup; other connectors and app data remain. Finish active browser work first. Restart the client to unload its cached tools. Use Connect to add the entry again.
 
 ## Repository activity
 

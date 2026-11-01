@@ -37,6 +37,7 @@ with tempfile.TemporaryDirectory(prefix='ragnar-delegation-') as folder:
    init=call('initialize',{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'Delegation switch validation','version':'fixture'}})
    p.stdin.write(json.dumps({'jsonrpc':'2.0','method':'notifications/initialized'})+'\n');p.stdin.flush()
    tool('name_session',{'name':'Delegation modes','category':'research','summary':'Temporary read-only settings validation'})
+   tool('tabs',{'action':'list'})
    assert 'For each new user prompt' not in init['instructions']
    help_result=tool('neo_help',{'topic':'browserhelm_execute'})
    assert not help_result.get('isError') and 'literal phrase' in json.dumps(help_result)
@@ -46,6 +47,12 @@ with tempfile.TemporaryDirectory(prefix='ragnar-delegation-') as folder:
    if enabled:
     task=value(tool('browserhelm_execute',{'page':page,'goal':'Read the public page heading','allowedActions':['extract'],'steps':[{'action':'extract','fields':[{'name':'heading','selector':'h1'}]}],'completion':{'selectorsPresent':['h1']}}))
     assert task['verified'] and task['steps'][0]['fields'][0]['value']=='Delegation fixture'
+    tool('run',{'code':'const p=await browser.page(%s);await p.evaluate(()=>{for(let i=0;i<80;i++){const a=document.createElement("a");a.href="https://example.com/"+i+"x".repeat(1800);a.textContent="Fixture link "+i;document.body.appendChild(a);}});return true;'%page})
+    link_heavy=value(tool('browserhelm_execute',{'page':page,'goal':'Read heading without unrelated links','allowedActions':['extract'],'steps':[{'action':'extract','fields':[{'name':'heading','selector':'h1'}]}],'completion':{'selectorsPresent':['h1']}}))
+    assert link_heavy['verified'] and link_heavy['browserCalls']==1 and not link_heavy['decisions']
+    oracle=value(tool('run',{'code':'const p=await browser.page(%s);return (await p.evaluate(()=>({heading:document.querySelector("h1").innerText,links:document.querySelectorAll("a").length}))).value;'%page}))
+    assert oracle=={'heading':'Delegation fixture','links':80}
+    assert link_heavy['steps'][0]['fields'][0]['value']==oracle['heading']
     tool('run',{'code':'const p=await browser.page(%s);await p.evaluate(()=>{document.body.innerHTML="<h1>Delegation fixture</h1><p>"+"a".repeat(2300)+" TARGET PHRASE "+"z".repeat(2000)+"</p>";document.body.style.fontFamily="font".repeat(300);});return true;'%page})
     args={'page':page,'goal':'Read heading and focused excerpt','allowedActions':['inspect','extract'],'steps':[{'action':'inspect'},{'action':'extract','fields':[{'name':'focused','selector':'p','contains':'target phrase'},{'name':'absent','selector':'p','contains':'absent phrase'}]}],'completion':{'selectorsPresent':['h1'],'textPresent':['target phrase']}}
     compact_result=tool('browserhelm_execute',args);compact=value(compact_result)
@@ -62,7 +69,7 @@ with tempfile.TemporaryDirectory(prefix='ragnar-delegation-') as folder:
     data=json.loads(settings.read_text());data['delegationEnabled']=False;settings.write_text(json.dumps(data))
     rejected=tool('browserhelm_execute',{})
     assert rejected['isError'] and 'disabled' in rejected['content'][0]['text']
-    observed={'delegationEnabled':True,'verified':True,'heading':'Delegation fixture','browserCalls':task['browserCalls'],'decisions':task['decisions'],'cachedCallAfterOptOut':'blocked','executorHelpBeforeCatalog':True,'agentMarkersDefaultOff':True,'compactFocusedRead':{'browserCalls':compact['browserCalls'],'clientBytes':len(json.dumps(compact_result).encode()),'outputSpilled':False,'truncationExplicit':True,'missingPhraseExplicit':True},'explicitStylesPreserved':True,'explicitStylesSpilled':styled_spilled}
+    observed={'delegationEnabled':True,'verified':True,'heading':'Delegation fixture','browserCalls':task['browserCalls'],'decisions':task['decisions'],'linkHeavyExtractionVerifiedIndependently':True,'cachedCallAfterOptOut':'blocked','executorHelpBeforeCatalog':True,'agentMarkersDefaultOff':True,'compactFocusedRead':{'browserCalls':compact['browserCalls'],'clientBytes':len(json.dumps(compact_result).encode()),'outputSpilled':False,'truncationExplicit':True,'missingPhraseExplicit':True},'explicitStylesPreserved':True,'explicitStylesSpilled':styled_spilled}
    else:
     direct=tool('evaluate',{'page':page,'code':'return {heading:document.querySelector("h1").innerText};','maxChars':1000})
     assert 'Delegation fixture' in json.dumps(direct) and not direct.get('isError')

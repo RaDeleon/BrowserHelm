@@ -148,7 +148,7 @@ import OSLog
         guard !busy else { return }
         busy = true; status = "Removing BrowserHelm from \(client)…"
         let command = Bundle.main.executableURL!.path
-        let mode = client == "Codex" ? "--disconnect-codex" : "--disconnect-claude"
+        let mode = client == "Codex" ? "--disconnect-codex" : client == "Claude Code" ? "--disconnect-claude-code" : "--disconnect-claude"
         DispatchQueue.global().async {
             let result: String
             do { result = try Runner.test(mode, extra: [command]) }
@@ -159,13 +159,13 @@ import OSLog
     func copyMCP() {
         do { let data = try JSONSerialization.data(withJSONObject: ["mcpServers": ["browserhelm": mcpEntry]], options: [.prettyPrinted, .sortedKeys]); NSPasteboard.general.clearContents(); NSPasteboard.general.setString(String(data: data, encoding: .utf8)!, forType: .string); status = "MCP configuration copied. Merge the browserhelm entry into your client's configuration." } catch { status = error.localizedDescription }
     }
-    func connectClaude() {
+    func connectClaude(code: Bool = false) {
         guard !busy else { return }
-        busy = true; status = "Connecting BrowserHelm to Claude Desktop…"
+        busy = true; status = "Configuring BrowserHelm for \(code ? "Claude Code" : "Claude Desktop")…"
         let command = Bundle.main.executableURL!.path
         DispatchQueue.global().async {
             let result: String
-            do { result = try Runner.test("--connect-claude", extra: [command]) }
+            do { result = try Runner.test(code ? "--connect-claude-code" : "--connect-claude", extra: [command]) }
             catch { result = error.localizedDescription }
             DispatchQueue.main.async { self.busy = false; self.status = result; self.refreshDashboard() }
         }

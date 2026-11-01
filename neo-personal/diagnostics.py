@@ -19,6 +19,7 @@ EVENT_LIMIT = 10000
 DISPLAY_LIMIT = 500
 CATEGORIES = {
     'ok': ('Request completed.', 'No action needed.'),
+    'startup_recovered': ('Neo became reachable during the bounded startup grace period.', 'MCP initialization succeeded after refused connections. No browser action was retried.'),
     'rpc_error': ('The upstream MCP server returned an error.', 'Check the MCP code and Neo connection. Inspect browser state before repeating a write.'),
     'protocol_mismatch': ('MCP protocol negotiation failed.', 'Reconnect the MCP client after its current task finishes. Check that both apps are up to date.'),
     'session_expired': ('The Neo transport session is missing or expired.', 'The next request will attempt session renewal. The failed request was not replayed; inspect browser state before repeating a write. Reconnect the client if renewal fails.'),
@@ -169,7 +170,7 @@ class Diagnostics:
         normalized = issue(category, details.get('code'), details.get('http_status'))
         normalized['exception_type'] = safe_symbol(details['exception_type']) if details.get('exception_type') else None
         event = dict(id=uuid.uuid4().hex, session_id=self.sid, request_id=row.get('id'), created=time.time(), source=source,
-                     severity=severity or ('info' if category == 'ok' else 'warning' if category == 'escalated' else 'error'),
+                     severity=severity or ('info' if category == 'ok' else 'warning' if category in ('escalated', 'startup_recovered') else 'error'),
                      method=safe_symbol(row.get('method')), tool=safe_symbol(row.get('tool')),
                      **normalized, duration=max(0, row.get('finished', 0) - row.get('started', 0)),
                      upstream_calls=row.get('upstream_calls', 0), input_bytes=row.get('input_bytes', 0), client_bytes=row.get('client_bytes', 0))

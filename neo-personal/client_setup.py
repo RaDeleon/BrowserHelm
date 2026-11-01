@@ -73,35 +73,56 @@ def connect_codex(command, path=None):
 
 
 def connect_claude(command, path=None):
-    from migration import migrate_json_text, atomic_update
     path = pathlib.Path(path) if path else pathlib.Path.home()/'Library/Application Support/Claude/claude_desktop_config.json'
-    if not command.endswith('/BrowserHelm.app/Contents/MacOS/BrowserHelm') or not os.access(command, os.X_OK):
+    return _connect_claude(command, path, 'Claude Desktop')
+
+
+def connect_claude_code(command, path=None):
+    path = pathlib.Path(path) if path else pathlib.Path.home()/'.claude.json'
+    return _connect_claude(command, path, 'Claude Code')
+
+
+def _connect_claude(command, path, label):
+    from migration import migrate_json_text, atomic_update
+    if not isinstance(command, str) or not command.endswith('/BrowserHelm.app/Contents/MacOS/BrowserHelm') or not pathlib.Path(command).is_file() or not os.access(command, os.X_OK):
         raise ValueError('Install BrowserHelm in Applications before connecting Claude.')
     if path.is_symlink(): raise ValueError('Claude configuration is a symlink. No changes made.')
     original = path.read_bytes() if path.exists() else None
     text = (original or b'{}').decode('utf-8')
-    data = json.loads(migrate_json_text(text, command))
+    migrated = migrate_json_text(text, command)
+    data = json.loads(migrated)
     servers = data.setdefault('mcpServers', {})
     if not isinstance(servers, dict): raise ValueError('Unexpected mcpServers format. No changes made.')
-    if 'browserhelm' in servers and servers['browserhelm'].get('command') != command:
-        raise ValueError('Another browserhelm entry already exists. No changes made.')
-    servers['browserhelm'] = dict(servers.get('browserhelm', {}), command=command, args=['--mcp'])
+    restart = 'Start a new Claude Code session' if label == 'Claude Code' else 'Quit and reopen Claude Desktop'
+    if 'browserhelm' in servers:
+        entry = servers['browserhelm']
+        if (not isinstance(entry, dict) or entry.get('command') != command or entry.get('args') != ['--mcp']
+                or 'url' in entry or entry.get('type', 'stdio') != 'stdio'):
+            raise ValueError('Another browserhelm entry already exists. No changes made.')
+        if entry.get('disabled') is True or entry.get('enabled') is False:
+            raise ValueError('BrowserHelm is configured but disabled. Enable it in your client settings.')
+        if migrated == text:
+            return f'BrowserHelm is already configured for {label}. {restart} to load its tools. Connection does not override tool routing preferences.'
+    else:
+        servers['browserhelm'] = dict(command=command, args=['--mcp'])
+        if label == 'Claude Code': servers['browserhelm']['type'] = 'stdio'
     updated = json.dumps(data, indent=2, ensure_ascii=False).encode('utf-8')
     backup = atomic_update(path, original, updated)
-    return f'BrowserHelm connected to Claude Desktop. Backup: {backup}. Quit and reopen Claude Desktop to load its tools.'
+    return f'BrowserHelm configured for {label}. Backup: {backup}. {restart} to load its tools. Other connectors and routing preferences are preserved.'
 
 
 def disconnect_client(command, client, path=None):
     """Remove only this app's matching MCP entry, with a private backup."""
     import re
-    import tomllib
+    if client == 'codex': import tomllib
     from migration import atomic_update
-    if client not in ('codex', 'claude'):
+    if client not in ('codex', 'claude', 'claude-code'):
         raise ValueError('Unsupported MCP client.')
     if not isinstance(command, str) or not command.endswith('/BrowserHelm.app/Contents/MacOS/BrowserHelm'):
         raise ValueError('Expected the BrowserHelm launcher path.')
-    label = 'Codex' if client == 'codex' else 'Claude Desktop'
-    path = pathlib.Path(path) if path is not None else codex_config_path() if client == 'codex' else pathlib.Path.home()/'Library/Application Support/Claude/claude_desktop_config.json'
+    label = {'codex':'Codex', 'claude':'Claude Desktop', 'claude-code':'Claude Code'}[client]
+    path = pathlib.Path(path) if path is not None else (codex_config_path() if client == 'codex' else
+            pathlib.Path.home()/'.claude.json' if client == 'claude-code' else pathlib.Path.home()/'Library/Application Support/Claude/claude_desktop_config.json')
     if path.is_symlink(): raise ValueError('Client configuration is a symlink. No changes made.')
     if not path.exists(): return f'BrowserHelm is not configured in {label}. No changes made.'
     original = path.read_bytes()
@@ -117,7 +138,7 @@ def disconnect_client(command, client, path=None):
         raise ValueError('The browserhelm entry belongs to another command. No changes made.')
     expected = dict(data)
     expected[key] = {name:value for name,value in servers.items() if name != 'browserhelm'}
-    if client == 'claude':
+    if client != 'codex':
         updated = json.dumps(expected, indent=2, ensure_ascii=False)+'\n'
     else:
         headers = list(re.finditer(r'^[ \t]*\[.+?\][ \t]*(?:#.*)?$', text, re.M))
@@ -130,5 +151,6 @@ def disconnect_client(command, client, path=None):
         if not expected[key] and key not in parsed: expected.pop(key)
         if parsed != expected: raise ValueError('Could not preserve Codex settings. No changes made.')
     backup = atomic_update(path, original, updated.encode('utf-8'))
-    restart = 'Open a new chat or restart Codex' if client == 'codex' else 'Quit and reopen Claude Desktop'
+    restart = ('Open a new chat or restart Codex' if client == 'codex' else
+               'Start a new Claude Code session' if client == 'claude-code' else 'Quit and reopen Claude Desktop')
     return f'BrowserHelm removed from {label}. Other settings and MCP entries preserved. Backup: {backup}. {restart} to unload its tools. Existing sessions continue until restarted.'

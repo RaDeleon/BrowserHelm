@@ -41,7 +41,7 @@ struct ConnectorsView: View {
                             }
                             Text(client.path).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
                             Text("Configured means a local entry exists. A live session means BrowserHelm recorded an open MCP process; it does not imply a request is currently running.").font(.caption).foregroundStyle(.secondary)
-                            if client.name == "Claude Desktop" || client.name == "Codex" {
+                            if ["Claude Desktop", "Claude Code", "Codex"].contains(client.name) {
                                 ClientConnectionActions(store: store, client: client.name)
                             } else {
                                 Button("Copy MCP config") { store.copyMCP() }
@@ -79,7 +79,7 @@ struct ClientConnectionActions: View {
         HStack {
             Button("Connect \(client)") {
                 if client == "Codex" { store.connectCodex() }
-                else { store.connectClaude() }
+                else { store.connectClaude(code: client == "Claude Code") }
             }.buttonStyle(.borderedProminent)
             Button("Remove from \(client)", role: .destructive) { confirmRemoval = true }
             Button("Copy MCP config") { client == "Codex" ? store.copyCodex() : store.copyMCP() }

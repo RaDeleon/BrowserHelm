@@ -64,14 +64,15 @@ EXEC_TOOL = {'name': 'browserhelm_execute', 'description':
 # One current-page read batches consecutive inspections and extracts. Never dereference a missing element.
 READ_JS = r'''({jobs,checks,needle}) => {
 const visible=e=>!!e&&e.getClientRects().length>0;
-const body=document.body?.innerText||'';
+const body=(needle||(checks.textPresent||[]).length)?document.body?.innerText||'':'';
 const select=s=>{try{return {element:document.querySelector(s)}}catch{return {invalid:true}}};
 const style=e=>{if(!e)return null;const s=getComputedStyle(e);return {
  fontFamily:s.fontFamily,fontSize:s.fontSize,fontWeight:s.fontWeight,color:s.color,
  backgroundColor:s.backgroundColor,padding:s.padding,letterSpacing:s.letterSpacing};};
-const links=Array.from(document.querySelectorAll('a[href]')).filter(a=>visible(a)&&!a.hasAttribute('download'))
+const linkLimit=needle?60:jobs.some(j=>j.action==='inspect')?20:0;
+const links=linkLimit?Array.from(document.querySelectorAll('a[href]')).filter(a=>visible(a)&&!a.hasAttribute('download'))
  .map(a=>({url:a.href,label:(a.innerText||a.getAttribute('aria-label')||'').trim().slice(0,120)}))
- .filter(a=>a.label&&a.url.length<=2000).slice(0,60);
+ .filter(a=>a.label&&a.url.length<=2000).slice(0,linkLimit):[];
 const findings=jobs.map(j=>{
  if(j.action==='inspect')return {action:'inspect',headings:Array.from(document.querySelectorAll('h1,h2,h3'))
   .filter(visible).slice(0,12).map(e=>({tag:e.tagName,text:String(e.innerText||e.textContent||'').slice(0,160),

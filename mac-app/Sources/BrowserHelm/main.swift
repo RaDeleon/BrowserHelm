@@ -26,7 +26,7 @@ if CommandLine.arguments.contains("--provider-key") {
         interrupt.setEventHandler { if process.isRunning { process.terminate() } }; interrupt.resume()
         try process.run(); process.waitUntilExit(); exit(process.terminationStatus)
     } catch { fputs("BrowserHelm: \(error.localizedDescription)\n", stderr); exit(1) }
-} else if let mode = CommandLine.arguments.first(where: { ["--connect-codex", "--connect-claude", "--disconnect-codex", "--disconnect-claude"].contains($0) }) {
+} else if let mode = CommandLine.arguments.first(where: { ["--connect-codex", "--connect-claude", "--connect-claude-code", "--disconnect-codex", "--disconnect-claude", "--disconnect-claude-code"].contains($0) }) {
     do { print(try Runner.test(mode, extra: [Bundle.main.executableURL!.path])) } catch { fputs("\(error.localizedDescription)\n", stderr); exit(1) }
 } else if let index = CommandLine.arguments.firstIndex(of: "--task"), CommandLine.arguments.count > index + 1 {
     do { print(try Runner.test("--task", extra: [CommandLine.arguments[index+1]])) } catch { fputs("\(error.localizedDescription)\n", stderr); exit(1) }

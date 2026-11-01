@@ -4,6 +4,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from client_setup import connect_codex, codex_config_path
+from client_setup import connect_claude, connect_claude_code, disconnect_client
+import json
 try:
     import tomllib
 except ImportError:
@@ -79,6 +81,62 @@ class CodexSetupTests(unittest.TestCase):
     def test_custom_codex_home(self):
         with patch.dict(os.environ, {'CODEX_HOME':str(self.root/'custom')}):
             self.assertEqual(codex_config_path(), self.root/'custom/config.toml')
+
+
+class ClaudeSetupTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = pathlib.Path(self.tmp.name)
+        launcher = self.root/'BrowserHelm.app/Contents/MacOS/BrowserHelm'
+        launcher.parent.mkdir(parents=True); launcher.write_text('fixture'); launcher.chmod(0o700)
+        self.command = str(launcher)
+        self.path = self.root/'.claude.json'
+
+    def tearDown(self): self.tmp.cleanup()
+
+    def test_code_setup_preserves_project_settings_and_direct_connector(self):
+        old = {'mcpServers':{'browseros-neo':{'type':'http','url':'http://localhost:9010/mcp'}},
+               'projects':{'/fixture':{'disabledMcpServers':['browseros-neo']}},'theme':'dark'}
+        self.path.write_text(json.dumps(old)); original=self.path.read_bytes()
+        with patch('client_setup.pathlib.Path.home', return_value=self.root):
+            self.assertIn('Claude Code',connect_claude_code(self.command))
+        current=json.loads(self.path.read_text()); own=current['mcpServers'].pop('browserhelm')
+        self.assertEqual(current,old);self.assertEqual(own,{'type':'stdio','command':self.command,'args':['--mcp']})
+        backup=list(self.root.glob('*.bak'))[0]
+        self.assertEqual(backup.read_bytes(),original);self.assertEqual(backup.stat().st_mode & 0o777,0o600)
+        before=self.path.read_bytes()
+        self.assertIn('already configured',connect_claude_code(self.command,self.path))
+        self.assertEqual(before,self.path.read_bytes());self.assertEqual(len(list(self.root.glob('*.bak'))),1)
+        with patch('client_setup.pathlib.Path.home', return_value=self.root):
+            self.assertIn('Claude Code',disconnect_client(self.command,'claude-code'))
+        self.assertEqual(json.loads(self.path.read_text()),old)
+
+    def test_claude_conflicts_and_disabled_entries_are_not_overwritten(self):
+        own={'command':self.command,'args':['--mcp']}
+        for entry in [None, 'bad', {**own,'args':['--other']},{**own,'url':'http://localhost'},
+                      {**own,'type':'http'},{**own,'disabled':True},{**own,'enabled':False}]:
+            for connect in (connect_claude,connect_claude_code):
+                with self.subTest(entry=entry,client=connect.__name__):
+                    self.path.write_text(json.dumps({'mcpServers':{'browserhelm':entry}}));before=self.path.read_bytes()
+                    with self.assertRaises(ValueError):connect(self.command,self.path)
+                    self.assertEqual(self.path.read_bytes(),before)
+        self.assertEqual(list(self.root.glob('*.bak')),[])
+
+    def test_code_setup_rejects_malformed_symlink_and_concurrent_changes(self):
+        for text in ['[]','null','broken', '{"mcpServers":[]}']:
+            self.path.write_text(text)
+            with self.assertRaises(ValueError):connect_claude_code(self.command,self.path)
+            self.assertEqual(self.path.read_text(),text)
+        target=self.root/'target.json';target.write_text('{}');self.path.unlink();self.path.symlink_to(target)
+        with self.assertRaises(ValueError):connect_claude_code(self.command,self.path)
+        self.path.unlink();self.path.write_text('{}')
+        original_temp=tempfile.NamedTemporaryFile
+        def race(*args,**kwargs):
+            self.path.write_text('{"theme":"new"}');return original_temp(*args,**kwargs)
+        with patch('migration.tempfile.NamedTemporaryFile',side_effect=race):
+            with self.assertRaisesRegex(ValueError,'changed'):connect_claude_code(self.command,self.path)
+        self.assertEqual(self.path.read_text(),'{"theme":"new"}')
+        self.assertEqual(list(self.root.glob('*.bak')),[])
 
 
 @unittest.skipIf(tomllib is None, 'Packaged Python 3.12 provides tomllib')

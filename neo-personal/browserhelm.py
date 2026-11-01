@@ -110,6 +110,11 @@ class BrowserHelmGateway(Gateway):
         if row is not None:
             row['diagnostic'] = classify_error(str(error), http_status=http_status, exception=error)
 
+    def startup_recovered(self):
+        row = getattr(self.context, 'row', None)
+        if row is not None:
+            row['diagnostic'] = issue('startup_recovered')
+
     def enable_memory(self, path):
         try:
             self.memory = ExperienceMemory(self.settings.get('memory', {}), path)
@@ -641,20 +646,24 @@ def main():
     parser.add_argument("--sync-memory", action="store_true")
     parser.add_argument("--task", help="JSON task start, finish, attach or usage command")
     parser.add_argument("--connect-claude", help="Installed BrowserHelm launcher path")
+    parser.add_argument("--connect-claude-code", help="Installed BrowserHelm launcher path")
     parser.add_argument("--connect-codex", help="Installed BrowserHelm launcher path")
     parser.add_argument("--benchmark", help="JSON containing sessionId and optional claudeTokens, neoTokens, gatewayTokens")
     parser.add_argument("--disconnect-codex", help="Installed BrowserHelm launcher path")
     parser.add_argument("--disconnect-claude", help="Installed BrowserHelm launcher path")
+    parser.add_argument("--disconnect-claude-code", help="Installed BrowserHelm launcher path")
     args = parser.parse_args()
-    if args.disconnect_codex or args.disconnect_claude:
+    if args.disconnect_codex or args.disconnect_claude or args.disconnect_claude_code:
         from client_setup import disconnect_client
-        try: print(disconnect_client(args.disconnect_codex or args.disconnect_claude, 'codex' if args.disconnect_codex else 'claude'))
+        try: print(disconnect_client(args.disconnect_codex or args.disconnect_claude or args.disconnect_claude_code,
+                                    'codex' if args.disconnect_codex else 'claude-code' if args.disconnect_claude_code else 'claude'))
         except (OSError, ValueError) as error:
             print(str(error), file=sys.stderr); sys.exit(1)
         return
-    if args.connect_codex or args.connect_claude:
-        from client_setup import connect_codex, connect_claude
-        try: print(connect_codex(args.connect_codex) if args.connect_codex else connect_claude(args.connect_claude))
+    if args.connect_codex or args.connect_claude or args.connect_claude_code:
+        from client_setup import connect_codex, connect_claude, connect_claude_code
+        try: print(connect_codex(args.connect_codex) if args.connect_codex else
+                   connect_claude_code(args.connect_claude_code) if args.connect_claude_code else connect_claude(args.connect_claude))
         except (OSError, ValueError) as error:
             print(str(error), file=sys.stderr); sys.exit(1)
         return

@@ -236,5 +236,31 @@ process.stdout.write(JSON.stringify(result));'''.replace('FUNCTION',READ_JS)
         self.assertEqual(result['findings'][1]['fields'][1]['value']['fontFamily'],'test')
         self.assertEqual([x['present'] for x in result['checks']],[True,True,False])
 
+    @unittest.skipUnless(shutil.which('node'), 'Node required for page-script fixture')
+    def test_extraction_skips_unrelated_body_and_links_but_navigation_retains_candidates(self):
+        harness = r'''let bodyReads=0,linkScans=0;
+const h1={innerText:'Fixture heading',getClientRects:()=>[1]};
+const body={get innerText(){bodyReads++;return 'Expected phrase'}};
+const links=Array.from({length:80},(_,i)=>({href:'https://example.com/'+i+'x'.repeat(1800),innerText:'Link '+i,
+ getClientRects:()=>[1],hasAttribute:()=>false}));
+global.document={body,title:'Fixture',querySelector:s=>s==='h1'?h1:null,
+ querySelectorAll:s=>{if(s==='a[href]'){linkScans++;return links}return []}};
+global.location={href:'https://example.com/'};
+const fn=FUNCTION;
+const extracted=fn({jobs:[{action:'extract',fields:[{name:'heading',selector:'h1'}]}],checks:{selectorsPresent:['h1']},needle:''});
+const afterExtract={bodyReads,linkScans};
+const inspected=fn({jobs:[{action:'inspect'}],checks:{},needle:''});
+const navigation=fn({jobs:[],checks:{textPresent:['Expected phrase']},needle:'missing destination'});
+process.stdout.write(JSON.stringify({extracted,afterExtract,inspectLinks:inspected.links.length,navigationLinks:navigation.links.length,
+ bodyReads,linkScans,navigationChecks:navigation.checks}));'''.replace('FUNCTION',READ_JS)
+        result=json.loads(subprocess.run(['node','-e',harness],capture_output=True,text=True,check=True).stdout)
+        self.assertEqual(result['afterExtract'],{'bodyReads':0,'linkScans':0})
+        self.assertEqual(result['extracted']['findings'][0]['fields'][0]['value'],'Fixture heading')
+        self.assertTrue(result['extracted']['checks'][0]['present'])
+        self.assertEqual(result['extracted']['links'],[])
+        self.assertLess(len(json.dumps(result['extracted'])),1000)
+        self.assertEqual(result['inspectLinks'],20);self.assertEqual(result['navigationLinks'],60)
+        self.assertEqual(result['bodyReads'],1);self.assertTrue(result['navigationChecks'][0]['present'])
+
 
 if __name__=='__main__':unittest.main()

@@ -23,6 +23,49 @@ class Reply(io.BytesIO):
 
 
 class ReliabilityTests(unittest.TestCase):
+    def test_startup_refusal_recovers_without_browser_dispatch(self):
+        from browserhelm import BrowserHelmGateway
+        import errno
+        with tempfile.TemporaryDirectory() as root:
+            g = BrowserHelmGateway({'provider':'none', 'memory':{'enabled':False}}, root)
+            g.enable_diagnostics(pathlib.Path(root)/'diagnostics.sqlite')
+            request = {'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-11-25'}}
+            refused = urllib.error.URLError(ConnectionRefusedError(errno.ECONNREFUSED, 'fixture'))
+            try:
+                with patch.object(g.opener, 'open', side_effect=[refused, Reply({'id':1,'result':{'protocolVersion':'2025-11-25'}}, 'ready')]) as send, patch('gateway.time.sleep') as sleep:
+                    response = g.handle(request)
+                self.assertIn('result', response)
+                self.assertEqual(send.call_count, 2)
+                self.assertEqual(sleep.call_args[0][0], .25)
+                self.assertTrue(all(json.loads(c.args[0].data)['method']=='initialize' for c in send.call_args_list))
+                with g.diagnostics.db() as db:
+                    row = db.execute('select category,severity from events').fetchone()
+                    self.assertEqual(tuple(row), ('startup_recovered','warning'))
+            finally:
+                g.moves_pool.shutdown(wait=True); g.diagnostics.close()
+
+    def test_startup_refusal_exhaustion_is_bounded(self):
+        import errno
+        with tempfile.TemporaryDirectory() as root:
+            g = Gateway('http://localhost:9010/mcp', root)
+            refused = urllib.error.URLError(ConnectionRefusedError(errno.ECONNREFUSED, 'fixture'))
+            with patch.object(g.opener,'open',side_effect=refused) as send, patch('gateway.time.sleep') as sleep:
+                with self.assertRaises(urllib.error.URLError):g.upstream_call({'id':1,'method':'initialize'})
+            self.assertEqual(send.call_count,6)
+            self.assertLessEqual(sum(c.args[0] for c in sleep.call_args_list),10)
+
+    def test_startup_timeout_http_and_browser_refusal_are_not_retried(self):
+        import errno
+        cases = [('initialize',urllib.error.URLError(TimeoutError())),
+                 ('initialize',urllib.error.HTTPError('http://localhost',503,'fixture',{},io.BytesIO(b'{}'))),
+                 ('tools/call',urllib.error.URLError(ConnectionRefusedError(errno.ECONNREFUSED,'fixture')))]
+        for method,error in cases:
+            with self.subTest(method=method,error=type(error).__name__), tempfile.TemporaryDirectory() as root:
+                g=Gateway('http://localhost:9010/mcp',root)
+                with patch.object(g.opener,'open',side_effect=error) as send, patch('gateway.time.sleep') as sleep:
+                    with self.assertRaises(Exception):g.upstream_call({'id':1,'method':method})
+                self.assertEqual(send.call_count,1);sleep.assert_not_called()
+
     def test_expired_action_is_not_replayed_and_concurrent_followups_renew_once(self):
         with tempfile.TemporaryDirectory() as root:
             g = Gateway('http://localhost:9010/mcp', root)

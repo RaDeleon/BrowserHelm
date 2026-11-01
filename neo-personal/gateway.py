@@ -6,6 +6,7 @@ No browser/profile changes. Logs only tool names and payload sizes to stderr.
 """
 import argparse
 import copy
+import errno
 import json
 import os
 import pathlib
@@ -27,6 +28,7 @@ INSTRUCTIONS = """BrowserOS neo: the user's real logged-in browser, driven by yo
 Name the session with name_session. Use run for bounded multi-step work (30s max).
 Open your own tabs; leave others as found unless the user authorizes changes.
 On reconnect, list before opening; find your <client>/<task> group even among other-agent tabs and reuse groupId.
+When available, browser_profiles discovers profiles and browser_target binds the task. Bind before browser work, never inside run. Stale profile/window bindings require explicit recovery; never silently switch profiles. neo_help preserves the current upstream guidance.
 Observe -> act -> verify. Refs are eN handles and can go stale; refresh after navigation/large changes.
 Prefer interactive snapshot.text for controls; scoped read/grep for content. Process data inside run and return only needed fields.
 Granular snapshot defaults to interactive here; request mode=full for complete content. Granular act defaults to a capped diff; verify the requested postcondition, not just change counts. run actions require explicit verification.
@@ -202,10 +204,30 @@ class Gateway:
                 if initialized is not None:
                     raise RuntimeError('Neo initialization notification failed; reconnect the MCP client')
                 self.session_expired = False
-        reply = self._send_upstream(request)
+        reply = self._initialize_when_ready(request) if request.get('method') == 'initialize' else self._send_upstream(request)
         if request.get('method') == 'initialize' and isinstance(reply, dict) and isinstance(reply.get('result'), dict):
             self.session_expired = False
         return reply
+
+    def _initialize_when_ready(self, request):
+        # Only a refused TCP connection proves nothing reached Neo. Give a
+        # concurrently starting browser a bounded grace period, never replay an
+        # accepted handshake, HTTP error, timeout, notification or browser tool.
+        deadline = time.monotonic() + 10
+        for attempt in range(6):
+            try:
+                reply = self._send_upstream(request, timeout_limit=max(.05, deadline-time.monotonic()))
+                if attempt and isinstance(reply, dict) and isinstance(reply.get('result'), dict):
+                    hook = getattr(self, 'startup_recovered', None)
+                    if hook: hook()
+                return reply
+            except urllib.error.URLError as error:
+                reason = error.reason
+                remaining = deadline-time.monotonic()
+                if (not isinstance(reason, OSError) or reason.errno != errno.ECONNREFUSED
+                        or attempt == 5 or remaining <= 0):
+                    raise
+                time.sleep(min(.25 * 2**attempt, remaining))
 
     def _send_upstream(self, request, timeout_limit=120):
         headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
@@ -422,6 +444,8 @@ class Gateway:
             return transformed
         except Exception as error:
             if "id" in request:
+                if method == 'initialize':
+                    return rpc_error(request, "Neo MCP initialization failed (%s). Start BrowserOS Neo, verify its endpoint, then reconnect this client. No browser action was dispatched." % type(error).__name__)
                 # No automatic retry: a timed-out browser action may have completed.
                 return rpc_error(request, "Gateway could not obtain Neo response (%s). Do not retry mutations until checking browser state." % type(error).__name__)
             print("neo-personal notification forwarding failed: %s" % type(error).__name__, file=sys.stderr, flush=True)
