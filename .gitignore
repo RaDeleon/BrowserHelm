@@ -157,3 +157,6 @@ cookies.txt
 storage-state*.json
 storageState*.json
 .auth/
+
+# Private local project records
+/_devlog/

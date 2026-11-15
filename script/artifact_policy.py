@@ -9,7 +9,7 @@ LOCAL_DIRECTORIES = {
     '.local', 'local-data', 'data', 'node_modules', '.pytest_cache', '.mypy_cache',
     '.ruff_cache', '.tox', '.tools', '.claude', '.codex', '.openviking',
     '.browserhelm', '.openragnar', 'agents-output',
-    'generated_images', 'private', 'secrets', 'credentials', 'backups',
+    '_devlog', 'generated_images', 'private', 'secrets', 'credentials', 'backups',
     '.agents', '.aws', '.ssh', '.azure', '.gcloud', '.auth',
     'browser-profiles', 'user-data',
 }

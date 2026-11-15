@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="docs/images/browserhelm-banner.png?title=1" width="100%" alt="BrowserHelm original illustrated otter navigator at a brass and cyan helm, connecting conceptual assistant and browser panels.">
+</p>
+
+<p align="center">
   <img src="mac-app/Artwork/AppIcon.png" width="112" alt="BrowserHelm browser routing icon">
 </p>
 
