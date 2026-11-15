@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/browserhelm-banner.png" width="100%" alt="BrowserHelm original illustrated otter navigator at a brass and cyan helm, connecting conceptual assistant and browser panels.">
+  <img src="docs/images/browserhelm-banner.png?title=1" width="100%" alt="BrowserHelm original illustrated otter navigator at a brass and cyan helm, connecting conceptual assistant and browser panels.">
 </p>
 
 <p align="center">
